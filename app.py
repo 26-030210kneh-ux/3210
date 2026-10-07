@@ -1,228 +1,14 @@
 import streamlit as st
-import re
 
 st.set_page_config(
     page_title="예스노 탐정",
-    page_icon="🔎",
+    page_icon="🕵️",
     layout="wide"
 )
 
-# =========================================================
-# COMPACT STYLE
-# =========================================================
-st.markdown("""
-<style>
-.stApp {
-    background:#080b11;
-    color:#e5e7eb;
-}
-
-.block-container {
-    max-width:1280px !important;
-    padding-top:5px !important;
-    padding-bottom:3px !important;
-}
-
-/* 전체 간격 축소 */
-div[data-testid="stVerticalBlock"] {
-    gap:0.15rem;
-}
-
-h1,h2,h3,p {
-    margin-top:0 !important;
-    margin-bottom:3px !important;
-}
-
-hr {
-    margin:3px 0 !important;
-    border-color:#202735;
-}
-
-/* 제목 */
-.title {
-    font-size:21px;
-    font-weight:900;
-    color:#f8fafc;
-}
-
-.sub {
-    font-size:9px;
-    color:#718096;
-    margin-bottom:3px;
-}
-
-/* 사건 카드 */
-.case-card {
-    background:#0e141d;
-    border:1px solid #202938;
-    border-radius:7px;
-    padding:7px 9px;
-}
-
-.case-title {
-    font-size:13px;
-    font-weight:800;
-    color:#f8fafc;
-}
-
-.case-text {
-    font-size:9px;
-    line-height:1.35;
-    color:#b9c3d2;
-}
-
-/* 섹션 */
-.section {
-    font-size:11px;
-    font-weight:800;
-    color:#e2e8f0;
-    margin:3px 0 2px;
-}
-
-/* 입력 */
-.stTextInput input {
-    height:30px !important;
-    min-height:30px !important;
-    background:#0d131c !important;
-    border:1px solid #293447 !important;
-    color:#fff !important;
-    font-size:10px !important;
-}
-
-.stTextInput label {
-    display:none !important;
-}
-
-/* 버튼 */
-.stButton button,
-.stFormSubmitButton button {
-    height:30px !important;
-    min-height:30px !important;
-    padding:0 7px !important;
-    font-size:10px !important;
-    border-radius:5px !important;
-}
-
-/* 기록 */
-.chatbox {
-    background:#0c1119;
-    border:1px solid #202938;
-    border-radius:7px;
-    height:205px;
-    overflow-y:auto;
-    padding:6px;
-}
-
-.question {
-    background:#142036;
-    border-left:2px solid #3b82f6;
-    border-radius:4px;
-    padding:4px 6px;
-    margin-bottom:2px;
-}
-
-.question-label {
-    font-size:8px;
-    color:#60a5fa;
-    font-weight:800;
-}
-
-.question-text {
-    font-size:10px;
-    color:#f8fafc;
-}
-
-.answer {
-    background:#111821;
-    border-left:2px solid #64748b;
-    border-radius:4px;
-    padding:4px 6px;
-    margin-bottom:4px;
-}
-
-.answer-label {
-    font-size:8px;
-    color:#94a3b8;
-    font-weight:800;
-}
-
-.answer-text {
-    font-size:10px;
-    color:#dbe4ef;
-}
-
-.clue-inline {
-    font-size:8px;
-    color:#fbbf24;
-}
-
-/* 단서 */
-.clue {
-    background:#17150e;
-    border:1px solid #332b17;
-    border-radius:4px;
-    padding:4px 6px;
-    margin-bottom:2px;
-    color:#fcd34d;
-    font-size:9px;
-}
-
-/* 용의자 */
-.suspect {
-    background:#10161f;
-    border:1px solid #222d3d;
-    border-radius:5px;
-    padding:5px;
-    height:48px;
-}
-
-.suspect-name {
-    color:white;
-    font-size:10px;
-    font-weight:800;
-}
-
-.suspect-role {
-    color:#60a5fa;
-    font-size:8px;
-}
-
-.suspect-desc {
-    color:#7f8da0;
-    font-size:7px;
-}
-
-/* metric */
-[data-testid="stMetric"] {
-    background:#0e141d;
-    border:1px solid #202938;
-    border-radius:5px;
-    padding:2px 6px !important;
-}
-
-[data-testid="stMetricLabel"] {
-    font-size:7px !important;
-}
-
-[data-testid="stMetricValue"] {
-    font-size:13px !important;
-}
-
-/* radio */
-div[role="radiogroup"] {
-    gap:4px !important;
-}
-
-div[role="radiogroup"] label {
-    font-size:9px !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-
-# =========================================================
-# STATE
-# =========================================================
+# -------------------------
+# 세션 상태
+# -------------------------
 if "history" not in st.session_state:
     st.session_state.history = []
 
@@ -236,471 +22,411 @@ if "ending" not in st.session_state:
     st.session_state.ending = None
 
 
-# =========================================================
-# DATA
-# =========================================================
-CASE_TITLE = "새벽 2시 17분의 빈집"
+# -------------------------
+# 질문 판정
+# -------------------------
+def answer_question(question):
+    q = question.strip().lower()
 
-CASE_STORY = """
-새벽 2시 17분, 피해자가 자신의 집에서 쓰러진 채 발견되었다.
-현관문은 잠겨 있었고 강제 침입 흔적은 없었다.
-귀중품도 그대로였다.
-하지만 사건 직전 CCTV에는 17초의 공백이 있었고,
-피해자의 휴대전화에서는 통화 기록 하나가 삭제되어 있었다.
-범인은 피해자와 아는 사이일 가능성이 있다.
-"""
-
-SUSPECTS = {
-    "김민재": ("직장 동료", "승진 문제로 피해자와 다툼"),
-    "박서연": ("전 여자친구", "사건 직전 세 차례 전화"),
-    "최도윤": ("이웃", "CCTV 사각지대를 알고 있음")
-}
-
-
-# =========================================================
-# QUESTION LOGIC
-# =========================================================
-def clean(q):
-    return re.sub(r"\s+", " ", q.strip().lower())
-
-
-def investigate(question):
-    q = clean(question)
-
+    # 아무것도 입력하지 않은 경우
     if not q:
         return "불명", "질문을 입력해주세요.", None, 0
 
-    # 무관한 질문
-    if any(x in q for x in [
-        "문어", "고양이", "강아지",
-        "축구", "치킨", "날씨", "라면"
-    ]):
+    # 사건과 관계없는 질문
+    unrelated = [
+        "문어", "고양이", "강아지", "축구",
+        "날씨", "치킨", "라면", "게임",
+        "연예인", "나는 문어"
+    ]
+
+    if any(word in q for word in unrelated):
         return (
             "아니오",
-            "그 질문은 사건과 관련이 없습니다.",
+            "그 질문은 이번 사건과 관련이 없습니다.",
             None,
             0
         )
 
-    # 현관
-    if any(x in q for x in [
-        "현관", "침입", "강제로 들어",
-        "강제 침입", "문을 부수"
-    ]):
+    # 힌트
+    if "힌트" in q:
         return (
-            "아니오",
-            "현관에는 강제로 침입한 흔적이 없습니다.",
-            "범인은 강제로 들어온 사람이 아닐 가능성이 높습니다.",
-            2
+            "힌트",
+            "현관보다 사건 직전의 CCTV와 삭제된 통화 기록을 조사해보세요.",
+            "CCTV 17초 공백과 삭제된 통화 기록",
+            1
+        )
+
+    # 시간
+    if "몇 시" in q or "시간" in q or "2시 17분" in q or "2:17" in q:
+        return (
+            "예",
+            "사건이 발생한 것으로 추정되는 시간은 새벽 2시 17분입니다.",
+            "사건 발생 추정 시각은 새벽 2시 17분",
+            1
         )
 
     # CCTV
-    if any(x in q for x in [
-        "cctv", "카메라", "감시카메라", "영상"
-    ]):
+    if "cctv" in q or "카메라" in q:
         return (
             "예",
             "사건 직전 CCTV에 정확히 17초의 공백이 있습니다.",
-            "CCTV의 17초 공백이 핵심 단서입니다.",
-            3
-        )
-
-    # 전화
-    if any(x in q for x in [
-        "전화", "통화", "휴대폰", "핸드폰", "문자"
-    ]):
-        return (
-            "예",
-            "사건 직전 통화 기록 하나가 삭제되어 있습니다.",
-            "삭제된 통화의 상대를 확인해야 합니다.",
-            3
-        )
-
-    # 용의자
-    if "김민재" in q:
-        return (
-            "예",
-            "김민재는 피해자와 승진 문제로 다툰 적이 있습니다.",
-            "동기는 있지만 결정적인 증거는 없습니다.",
+            "CCTV에 17초의 공백이 존재한다",
             2
         )
 
-    if "박서연" in q:
+    # 통화
+    if "통화" in q or "전화" in q or "휴대폰" in q or "핸드폰" in q:
         return (
             "예",
-            "박서연은 사건 직전 피해자에게 세 번 전화했습니다.",
-            "수상하지만 이것만으로 범인이라고 할 수 없습니다.",
+            "피해자의 휴대전화에서 사건 직전 통화 기록 하나가 삭제되었습니다.",
+            "사건 직전 삭제된 통화 기록이 있다",
             2
         )
 
-    if "최도윤" in q:
-        return (
-            "예",
-            "최도윤은 CCTV 사각지대를 알고 있었습니다.",
-            "최도윤의 알리바이를 확인해보세요.",
-            3
-        )
-
-    # 알리바이
-    if "알리바이" in q:
-        return (
-            "예",
-            "최도윤의 알리바이에 가장 큰 의문점이 있습니다.",
-            "최도윤의 진술과 통화 기록을 비교하세요.",
-            3
-        )
-
-    # 금품
-    if any(x in q for x in [
-        "돈", "금품", "귀중품",
-        "도난", "훔쳐", "훔겼"
-    ]):
+    # 현관 / 침입
+    if "현관" in q or "문" in q or "침입" in q or "들어" in q:
         return (
             "아니오",
-            "귀중품은 그대로 남아 있습니다.",
-            "범인의 목적은 금품이 아니었습니다.",
+            "현관문에는 강제로 침입한 흔적이 없습니다.",
+            "범인은 강제로 침입하지 않았을 가능성이 높다",
             2
         )
 
     # 창문
-    if "창문" in q:
+    if "창문" in q or "창" in q:
         return (
             "아니오",
-            "창문에도 침입 흔적은 없습니다.",
-            None,
+            "창문에서도 외부에서 침입한 흔적은 발견되지 않았습니다.",
+            "창문을 통한 침입 가능성도 낮다",
+            1
+        )
+
+    # 귀중품
+    if "돈" in q or "귀중품" in q or "훔" in q or "도난" in q:
+        return (
+            "아니오",
+            "현금과 귀중품은 그대로 남아 있었습니다.",
+            "범인의 목적은 단순한 절도가 아니다",
             1
         )
 
     # 잠금
-    if any(x in q for x in [
-        "잠겨", "잠금", "열쇠", "잠갔"
-    ]):
+    if "잠겨" in q or "잠금" in q or "열쇠" in q or "문을 잠" in q:
         return (
             "예",
             "발견 당시 현관문은 잠겨 있었습니다.",
-            "범인은 자연스럽게 집 안으로 들어왔을 가능성이 있습니다.",
-            2
-        )
-
-    # 시간
-    if any(x in q for x in [
-        "시간", "몇 시", "언제", "2시", "17분", "새벽"
-    ]):
-        return (
-            "예",
-            "사건 발생 추정 시간은 새벽 2시 17분입니다.",
-            "CCTV의 17초 공백과 연결해보세요.",
-            2
+            "범행 후에도 현관문은 잠겨 있었다",
+            1
         )
 
     # 피해자
-    if any(x in q for x in [
-        "피해자", "혼자", "사망자"
-    ]):
+    if "혼자" in q or "혼자였" in q:
         return (
             "예",
-            "피해자는 사건 당시 집 안에 혼자 있었습니다.",
-            "범인은 피해자가 경계하지 않았던 사람일 가능성이 있습니다.",
+            "사건 당시 피해자는 집에 혼자 있었던 것으로 추정됩니다.",
+            "피해자는 사건 당시 혼자였다",
             1
         )
 
-    # 범인
-    if any(x in q for x in [
-        "범인", "누가", "살인범"
-    ]):
+    # 상해
+    if "죽" in q or "살인" in q or "다쳤" in q or "상처" in q or "무기" in q:
+        return (
+            "예",
+            "피해자는 머리에 강한 충격을 받은 흔적이 있습니다.",
+            "피해자는 머리에 강한 충격을 받았다",
+            1
+        )
+
+    # 김민재
+    if "김민재" in q or "민재" in q:
         return (
             "불명",
-            "현재 정보만으로 범인을 확정할 수 없습니다.",
-            "CCTV + 삭제된 통화 + 알리바이를 연결하세요.",
+            "김민재는 피해자와 승진 문제로 다툰 적이 있어 동기는 있습니다. "
+            "하지만 결정적인 증거는 아직 없습니다.",
+            "김민재에게는 승진 문제라는 동기가 있다",
             1
         )
 
-    # 힌트
-    if any(x in q for x in [
-        "힌트", "도움", "모르겠"
-    ]):
+    # 박서연
+    if "박서연" in q or "서연" in q:
         return (
-            "힌트",
-            "강제 침입이 없었다는 사실에 집중하세요.",
-            "피해자가 경계하지 않았던 사람을 찾아보세요.",
-            0
+            "예",
+            "박서연은 사건 직전 피해자에게 세 차례 전화를 걸었습니다.",
+            "박서연은 사건 직전 피해자에게 세 번 전화했다",
+            2
         )
 
+    # 최도윤
+    if "최도윤" in q or "도윤" in q:
+        return (
+            "예",
+            "최도윤은 피해자의 집 주변 CCTV 위치와 사각지대를 알고 있었습니다.",
+            "최도윤은 CCTV 사각지대를 알고 있었다",
+            2
+        )
+
+    # 알리바이
+    if "알리바이" in q or "범행 시간" in q:
+        return (
+            "불명",
+            "세 사람 모두 알리바이를 주장했지만, "
+            "최도윤의 진술에서 시간상 이상한 부분이 발견됩니다.",
+            "최도윤의 알리바이에 의문점이 있다",
+            2
+        )
+
+    # 범인 직접 질문
+    if "범인" in q or "누가" in q or "누구" in q:
+        return (
+            "불명",
+            "아직 범인을 단정할 수 없습니다. "
+            "CCTV 17초 공백과 삭제된 통화를 연결해보세요.",
+            "CCTV 공백과 통화 기록을 연결해야 한다",
+            1
+        )
+
+    # 기본 답변
     return (
         "불명",
-        "현재 확보된 사건 정보만으로는 확인할 수 없습니다.",
-        "현관, CCTV, 통화, 용의자, 알리바이에 대해 질문해보세요.",
+        "그 질문만으로는 판단하기 어렵습니다. "
+        "현관, CCTV, 통화 기록, 용의자의 알리바이를 조사해보세요.",
+        None,
         0
     )
 
 
-# =========================================================
-# END
-# =========================================================
-if st.session_state.ending:
+# -------------------------
+# 제목
+# -------------------------
+st.title("🕵️ 예스노 탐정")
+st.caption("새벽 2시 17분의 빈집 — 당신은 질문만으로 범인을 찾아야 합니다.")
 
-    st.markdown(
-        '<div class="title">🔎 예스노 탐정</div>',
-        unsafe_allow_html=True
-    )
-
-    if st.session_state.ending == "WIN":
-        st.success(
-            "🎉 사건 해결! 범인은 **최도윤**입니다. "
-            "CCTV 17초 공백, 삭제된 통화, 알리바이의 모순이 연결됩니다."
-        )
-
-    elif st.session_state.ending == "PARTIAL":
-        st.warning(
-            "⚠️ 김민재에게 동기는 있었지만 결정적인 증거가 없습니다."
-        )
-
-    else:
-        st.error(
-            "❌ 범인을 잘못 지목했습니다. 단서를 다시 확인하세요."
-        )
-
-    if st.button("🔄 다시 시작", use_container_width=True):
-        st.session_state.clear()
-        st.rerun()
-
-    st.stop()
+st.divider()
 
 
-# =========================================================
-# HEADER
-# =========================================================
-st.markdown(
-    '<div class="title">🔎 예스노 탐정</div>',
-    unsafe_allow_html=True
+# -------------------------
+# 사건 개요
+# -------------------------
+st.subheader("📁 사건 개요")
+
+st.write(
+    """
+    새벽 2시 17분, 한 남자가 자신의 집에서 쓰러진 채 발견되었다.
+
+    현관문은 잠겨 있었고 강제로 침입한 흔적은 없었다.
+    집 안의 귀중품도 그대로였다.
+
+    그런데 사건 직전 CCTV에는 정확히 17초의 공백이 발생했다.
+    또한 피해자의 휴대전화에서는 사건 직전 통화 기록 하나가 삭제되어 있었다.
+
+    경찰은 피해자와 관계가 있는 세 명을 용의자로 보고 있다.
+
+    **당신의 임무는 질문을 통해 단서를 모아 진짜 범인을 찾아내는 것이다.**
+    """
 )
 
-st.markdown(
-    '<div class="sub">사건을 읽고 원하는 질문을 직접 입력하세요.</div>',
-    unsafe_allow_html=True
-)
+st.divider()
 
 
-# =========================================================
-# CASE
-# =========================================================
-st.markdown('<div class="case-card">', unsafe_allow_html=True)
+# -------------------------
+# 사건 정보
+# -------------------------
+col1, col2, col3 = st.columns(3)
 
-st.markdown(
-    f'<div class="case-title">📁 {CASE_TITLE}</div>',
-    unsafe_allow_html=True
-)
+with col1:
+    st.metric("수집한 단서", len(st.session_state.clues))
 
-st.markdown(
-    f'<div class="case-text">{CASE_STORY}</div>',
-    unsafe_allow_html=True
-)
+with col2:
+    st.metric("탐정 점수", st.session_state.score)
 
-st.markdown("</div>", unsafe_allow_html=True)
+with col3:
+    st.metric("질문 횟수", len(st.session_state.history))
 
 
-# =========================================================
-# STATS
-# =========================================================
-x1, x2, x3 = st.columns(3)
+# -------------------------
+# 질문
+# -------------------------
+st.subheader("🔎 사건에 대해 질문하세요")
 
-with x1:
-    st.metric("질문", len(st.session_state.history))
-
-with x2:
-    st.metric("단서", len(st.session_state.clues))
-
-with x3:
-    st.metric("점수", st.session_state.score)
-
-
-# =========================================================
-# QUESTION
-# =========================================================
-st.markdown(
-    '<div class="section">🕵️ 질문하기</div>',
-    unsafe_allow_html=True
+st.write(
+    "예: `현관에 침입한 흔적이 있습니까?` / "
+    "`CCTV에 이상한 점이 있습니까?` / "
+    "`최도윤은 어디에 있었습니까?`"
 )
 
 with st.form("question_form", clear_on_submit=True):
+    question = st.text_input(
+        "질문",
+        placeholder="궁금한 것을 직접 입력하세요."
+    )
 
-    q1, q2 = st.columns([6, 0.8])
+    submitted = st.form_submit_button(
+        "질문하기",
+        use_container_width=True
+    )
 
-    with q1:
-        question = st.text_input(
-            "question",
-            placeholder="예: 현관에 강제로 들어온 흔적이 있습니까?",
-            label_visibility="collapsed"
-        )
+if submitted and question.strip():
+    answer, detail, clue, points = answer_question(question)
 
-    with q2:
-        submit = st.form_submit_button(
-            "질문",
-            use_container_width=True
-        )
+    st.session_state.history.append({
+        "question": question,
+        "answer": answer,
+        "detail": detail,
+        "clue": clue
+    })
 
-    if submit and question.strip():
+    st.session_state.score += points
 
-        answer, detail, clue, points = investigate(question)
+    if clue and clue not in st.session_state.clues:
+        st.session_state.clues.append(clue)
 
-        st.session_state.history.append({
-            "question": question.strip(),
-            "answer": answer,
-            "detail": detail,
-            "clue": clue
-        })
-
-        st.session_state.score += points
-
-        if clue and clue not in st.session_state.clues:
-            st.session_state.clues.append(clue)
-
-        st.rerun()
+    st.rerun()
 
 
-# =========================================================
-# CHAT
-# =========================================================
-st.markdown(
-    '<div class="section">💬 탐정 기록</div>',
-    unsafe_allow_html=True
-)
+# -------------------------
+# 질문 기록
+# -------------------------
+st.subheader("💬 탐정 기록")
 
-with st.container(height=205, border=True):
+if not st.session_state.history:
+    st.info("아직 질문한 내용이 없습니다. 사건에 대해 자유롭게 질문해보세요.")
 
-    if not st.session_state.history:
-
-        st.caption("아직 질문이 없습니다.")
-
-    else:
+else:
+    with st.container(height=260, border=True):
 
         for item in st.session_state.history:
 
-            st.markdown(
-                f"""
-                <div class="question">
-                    <div class="question-label">🕵️ 나</div>
-                    <div class="question-text">
-                        {item["question"]}
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            # 플레이어가 실제로 입력한 질문
+            st.write(f"🕵️ 나: {item['question']}")
 
-            clue_html = ""
+            # 탐정 시스템 답변
+            if item["answer"] == "예":
+                st.success(f"🔎 탐정 시스템 — 예\n\n{item['detail']}")
+
+            elif item["answer"] == "아니오":
+                st.error(f"🔎 탐정 시스템 — 아니오\n\n{item['detail']}")
+
+            elif item["answer"] == "힌트":
+                st.warning(f"🔎 탐정 시스템 — 힌트\n\n{item['detail']}")
+
+            else:
+                st.info(f"🔎 탐정 시스템 — 불명\n\n{item['detail']}")
 
             if item["clue"]:
-                clue_html = f"""
-                <div class="clue-inline">
-                    🧩 {item["clue"]}
-                </div>
-                """
+                st.caption(f"🧩 새로운 단서: {item['clue']}")
 
-            st.markdown(
-                f"""
-                <div class="answer">
-                    <div class="answer-label">🔎 탐정 시스템</div>
-                    <div class="answer-text">
-                        <b>{item["answer"]}</b> · {item["detail"]}
-                    </div>
-                    {clue_html}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            st.divider()
 
 
-# =========================================================
-# CLUE + SUSPECT
-# =========================================================
-c1, c2 = st.columns([1, 2])
+# -------------------------
+# 단서
+# -------------------------
+st.subheader("🧩 발견한 단서")
+
+if st.session_state.clues:
+    for i, clue in enumerate(st.session_state.clues, 1):
+        st.write(f"**{i}.** {clue}")
+else:
+    st.caption("아직 발견한 단서가 없습니다.")
+
+
+st.divider()
+
+
+# -------------------------
+# 용의자
+# -------------------------
+st.subheader("👤 용의자")
+
+c1, c2, c3 = st.columns(3)
 
 with c1:
-
-    st.markdown(
-        '<div class="section">🧩 단서</div>',
-        unsafe_allow_html=True
-    )
-
-    if st.session_state.clues:
-
-        for clue in st.session_state.clues[-4:]:
-
-            st.markdown(
-                f'<div class="clue">• {clue}</div>',
-                unsafe_allow_html=True
-            )
-
-    else:
-        st.caption("아직 발견한 단서가 없습니다.")
-
+    st.write("### 김민재")
+    st.write("피해자의 직장 동료")
+    st.caption("승진 문제로 피해자와 다툰 적이 있음.")
 
 with c2:
+    st.write("### 박서연")
+    st.write("피해자의 전 연인")
+    st.caption("사건 직전 피해자에게 세 차례 전화함.")
 
-    st.markdown(
-        '<div class="section">👤 용의자</div>',
-        unsafe_allow_html=True
+with c3:
+    st.write("### 최도윤")
+    st.write("피해자의 이웃")
+    st.caption("CCTV 위치와 사각지대를 알고 있음.")
+
+
+# -------------------------
+# 범인 지목
+# -------------------------
+st.divider()
+
+st.subheader("🎯 범인 지목")
+
+with st.form("culprit_form"):
+
+    culprit = st.radio(
+        "범인은 누구라고 생각합니까?",
+        ["김민재", "박서연", "최도윤"],
+        horizontal=True
     )
 
-    s1, s2, s3 = st.columns(3)
+    accuse = st.form_submit_button(
+        "범인 지목하기",
+        use_container_width=True
+    )
 
-    for col, (name, info) in zip(
-        [s1, s2, s3],
-        SUSPECTS.items()
-    ):
+if accuse:
 
-        with col:
+    if culprit == "최도윤":
+        st.session_state.ending = "win"
 
-            role, desc = info
-
-            st.markdown(
-                f"""
-                <div class="suspect">
-                    <div class="suspect-name">{name}</div>
-                    <div class="suspect-role">{role}</div>
-                    <div class="suspect-desc">{desc}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+    else:
+        st.session_state.ending = "lose"
 
 
-# =========================================================
-# ACCUSE
-# =========================================================
-st.markdown("<hr>", unsafe_allow_html=True)
+# -------------------------
+# 엔딩
+# -------------------------
+if st.session_state.ending == "win":
 
-with st.form("accuse_form"):
+    st.success(
+        """
+        ## 🎉 사건 해결
 
-    a1, a2 = st.columns([5, 1])
+        범인은 **최도윤**이었습니다.
 
-    with a1:
+        최도윤은 CCTV 사각지대를 알고 있었고,
+        그 지식을 이용해 CCTV에 17초의 공백을 만들었습니다.
 
-        suspect = st.radio(
-            "🚨 범인 지목",
-            list(SUSPECTS.keys()),
-            horizontal=True
-        )
+        또한 사건 직전 피해자와 관련된 통화 기록을 삭제했습니다.
 
-    with a2:
+        **당신은 사건의 핵심 단서를 정확히 연결해냈습니다.**
+        """
+    )
 
-        st.write("")
+elif st.session_state.ending == "lose":
 
-        accuse = st.form_submit_button(
-            "범인 지목",
-            use_container_width=True
-        )
+    st.error(
+        """
+        ## ❌ 범인을 잘못 지목했습니다.
 
-    if accuse:
+        아직 핵심 단서를 충분히 연결하지 못했습니다.
 
-        if suspect == "최도윤":
-            st.session_state.ending = "WIN"
+        CCTV의 **17초 공백**과
+        **삭제된 통화 기록**을 다시 조사해보세요.
+        """
+    )
 
-        elif suspect == "김민재":
-            st.session_state.ending = "PARTIAL"
 
-        else:
-            st.session_state.ending = "LOSE"
+# -------------------------
+# 다시 시작
+# -------------------------
+if st.session_state.ending:
 
+    if st.button("🔄 사건 다시 시작"):
+        st.session_state.history = []
+        st.session_state.clues = []
+        st.session_state.score = 0
+        st.session_state.ending = None
         st.rerun()
