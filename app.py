@@ -1,11 +1,10 @@
 import streamlit as st
-from PIL import Image, ImageDraw, ImageFont
+import streamlit.components.v1 as components
 import random
-import io
 
-# =========================================================
-# 페이지 설정
-# =========================================================
+# ============================================================
+# 페이지
+# ============================================================
 
 st.set_page_config(
     page_title="예스노 탐정",
@@ -14,1094 +13,1240 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# =========================================================
-# 디자인
-# =========================================================
+# ============================================================
+# CSS
+# ============================================================
 
 st.markdown("""
 <style>
 
-.stApp {
-    background: #080b10;
-    color: #eeeeee;
+html, body, [data-testid="stAppViewContainer"] {
+    background:#070a0e !important;
+}
+
+[data-testid="stHeader"] {
+    background:#070a0e !important;
+}
+
+[data-testid="stToolbar"] {
+    display:none;
 }
 
 .block-container {
-    max-width: 1250px;
-    padding-top: 30px;
-    padding-bottom: 100px;
+    max-width:1500px !important;
+    padding-top:12px !important;
+    padding-bottom:8px !important;
+    padding-left:22px !important;
+    padding-right:22px !important;
 }
 
-/* 기본 글자 */
-p, span, label {
-    color: #dfe7ef !important;
+section.main > div {
+    padding-bottom:0 !important;
 }
 
-/* 제목 */
-h1 {
-    font-weight: 900 !important;
-    letter-spacing: -2px;
+/* 전체 페이지 스크롤 제거 */
+html, body {
+    overflow:hidden !important;
 }
 
-h2, h3 {
-    font-weight: 800 !important;
+.main {
+    overflow:hidden !important;
+}
+
+* {
+    box-sizing:border-box;
+}
+
+/* 글자 */
+body, p, span, label, div {
+    font-family:
+    "Malgun Gothic",
+    "Noto Sans KR",
+    Arial,
+    sans-serif;
+}
+
+h1,h2,h3 {
+    margin:0 !important;
 }
 
 /* 버튼 */
 .stButton > button {
-    background-color: #162232 !important;
-    color: #ffffff !important;
-    border: 1px solid #40566d !important;
-    border-radius: 9px !important;
-    min-height: 48px;
-    font-weight: 800 !important;
+    width:100% !important;
+    background:#172435 !important;
+    color:#ffffff !important;
+    border:1px solid #48647e !important;
+    border-radius:6px !important;
+    font-weight:800 !important;
+    min-height:38px !important;
+    padding:5px 10px !important;
 }
 
 .stButton > button:hover {
-    background-color: #21405b !important;
-    border-color: #61b7ff !important;
-    color: white !important;
+    background:#24445f !important;
+    border-color:#65c2ff !important;
 }
 
-/* 입력창 */
-.stTextInput input,
-.stTextArea textarea {
-    background-color: #101720 !important;
-    color: white !important;
-    border: 1px solid #40566d !important;
+/* 입력 */
+.stTextInput {
+    margin-bottom:3px !important;
 }
 
-/* 정보 박스 */
+.stTextInput > div > div > input {
+    background:#0c131b !important;
+    color:#ffffff !important;
+    border:1px solid #41566c !important;
+    border-radius:6px !important;
+    height:40px !important;
+    font-size:13px !important;
+}
+
+/* 라디오 */
+.stRadio > div {
+    gap:4px !important;
+}
+
+.stRadio label {
+    background:#0d141c !important;
+    border:1px solid #263544 !important;
+    border-radius:5px !important;
+    padding:4px 7px !important;
+    font-size:12px !important;
+}
+
+/* 알림 */
 div[data-testid="stAlert"] {
-    border-radius: 10px;
+    padding:8px 10px !important;
+    margin:5px 0 !important;
+    font-size:12px !important;
 }
 
-/* 카드 */
-.card {
-    background: #10161e;
-    border: 1px solid #293747;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 15px;
+/* Streamlit 기본 여백 */
+[data-testid="column"] {
+    padding-left:5px !important;
+    padding-right:5px !important;
 }
 
-.case-header {
-    background: linear-gradient(
-        90deg,
-        #101923,
-        #0b1118
-    );
-    border: 1px solid #34495c;
-    border-radius: 14px;
-    padding: 22px;
-    margin-bottom: 20px;
+/* 이미지 */
+img {
+    border-radius:7px !important;
 }
 
-.case-title {
-    font-size: 30px;
-    font-weight: 900;
+/* Expander */
+.streamlit-expanderHeader {
+    font-size:12px !important;
 }
 
-.case-sub {
-    color: #8fa4b8;
-    margin-top: 5px;
-}
+/* 모바일 */
+@media(max-width:900px) {
 
-.stat {
-    background: #101720;
-    border: 1px solid #29394a;
-    border-radius: 10px;
-    text-align: center;
-    padding: 14px;
-}
+    html, body {
+        overflow:auto !important;
+    }
 
-.stat-label {
-    color: #8195a8;
-    font-size: 13px;
-}
+    .block-container {
+        padding:10px !important;
+    }
 
-.stat-value {
-    font-size: 27px;
-    font-weight: 900;
-    color: white;
-}
-
-.clue {
-    background: #101923;
-    border-left: 4px solid #4da9ed;
-    border-radius: 7px;
-    padding: 15px;
-    margin-bottom: 10px;
-}
-
-.evidence-number {
-    color: #63b9ff;
-    font-size: 13px;
-    font-weight: 900;
-}
-
-.ending-true {
-    background: #10271e;
-    border: 1px solid #35b879;
-    padding: 25px;
-    border-radius: 12px;
-}
-
-.ending-bad {
-    background: #291316;
-    border: 1px solid #c8525c;
-    padding: 25px;
-    border-radius: 12px;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 
-# =========================================================
-# 세션
-# =========================================================
+# ============================================================
+# 세션 초기화
+# ============================================================
 
-defaults = {
-    "started": True,
-    "question_count": 0,
-    "score": 0,
-    "trust": 100,
-    "clues": [],
-    "history": [],
-    "asked": [],
-    "game_over": False,
-    "ending": ""
-}
+if "questions" not in st.session_state:
+    st.session_state.questions = 0
 
-for key, value in defaults.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
+if "score" not in st.session_state:
+    st.session_state.score = 0
 
+if "trust" not in st.session_state:
+    st.session_state.trust = 100
 
-# =========================================================
-# 사건 현장 이미지 직접 생성
-# =========================================================
+if "clues" not in st.session_state:
+    st.session_state.clues = []
 
-def make_scene():
+if "history" not in st.session_state:
+    st.session_state.history = []
 
-    W = 1000
-    H = 600
+if "finished" not in st.session_state:
+    st.session_state.finished = False
 
-    img = Image.new("RGB", (W, H), "#111820")
-    draw = ImageDraw.Draw(img)
-
-    # 바닥
-    draw.rectangle(
-        [0, 390, W, H],
-        fill="#202831"
-    )
-
-    # 벽
-    draw.rectangle(
-        [0, 0, W, 390],
-        fill="#18212a"
-    )
-
-    # 바닥 선
-    for y in range(390, H, 35):
-        draw.line(
-            [0, y, W, y],
-            fill="#2b343d",
-            width=2
-        )
-
-    # 문
-    draw.rectangle(
-        [720, 70, 910, 390],
-        fill="#252d35",
-        outline="#4b5965",
-        width=5
-    )
-
-    draw.rectangle(
-        [745, 100, 885, 370],
-        fill="#1d252d",
-        outline="#596774",
-        width=3
-    )
-
-    # 문 손잡이
-    draw.ellipse(
-        [850, 230, 870, 250],
-        fill="#c0a15a"
-    )
-
-    # 창문
-    draw.rectangle(
-        [60, 70, 300, 250],
-        fill="#0e2637",
-        outline="#627584",
-        width=5
-    )
-
-    draw.line(
-        [180, 70, 180, 250],
-        fill="#627584",
-        width=4
-    )
-
-    draw.line(
-        [60, 160, 300, 160],
-        fill="#627584",
-        width=4
-    )
-
-    # 책상
-    draw.rectangle(
-        [380, 220, 650, 250],
-        fill="#594536"
-    )
-
-    draw.rectangle(
-        [395, 250, 420, 400],
-        fill="#443529"
-    )
-
-    draw.rectangle(
-        [610, 250, 635, 400],
-        fill="#443529"
-    )
-
-    # 램프
-    draw.rectangle(
-        [470, 150, 480, 220],
-        fill="#c7b179"
-    )
-
-    draw.polygon(
-        [
-            (430, 150),
-            (520, 150),
-            (500, 190),
-            (450, 190)
-        ],
-        fill="#d4bd7b"
-    )
-
-    # 사람 실루엣
-    # 머리
-    draw.ellipse(
-        [310, 310, 390, 390],
-        fill="#111419"
-    )
-
-    # 몸
-    draw.polygon(
-        [
-            (335, 370),
-            (420, 385),
-            (520, 445),
-            (470, 485),
-            (360, 430),
-            (285, 405)
-        ],
-        fill="#111419"
-    )
-
-    # 팔
-    draw.line(
-        [360, 390, 270, 455],
-        fill="#0c1014",
-        width=30
-    )
-
-    draw.line(
-        [430, 405, 530, 455],
-        fill="#0c1014",
-        width=30
-    )
-
-    # 다리
-    draw.line(
-        [430, 450, 560, 520],
-        fill="#0c1014",
-        width=38
-    )
-
-    draw.line(
-        [370, 445, 250, 520],
-        fill="#0c1014",
-        width=38
-    )
-
-    # 사건 번호
-    draw.rectangle(
-        [25, 20, 300, 60],
-        fill="#0b1015",
-        outline="#657584"
-    )
-
-    draw.text(
-        (40, 30),
-        "CASE 001  //  CRIME SCENE",
-        fill="#e8edf2"
-    )
-
-    # 증거 표시
-    markers = [
-        (280, 470, "A"),
-        (535, 430, "B"),
-        (850, 330, "C"),
-        (180, 275, "D")
-    ]
-
-    for x, y, letter in markers:
-
-        draw.ellipse(
-            [x-18, y-18, x+18, y+18],
-            fill="#c93636",
-            outline="#ffffff",
-            width=2
-        )
-
-        draw.text(
-            (x-6, y-10),
-            letter,
-            fill="white"
-        )
-
-    # 하단 경고
-    draw.rectangle(
-        [0, 550, W, H],
-        fill="#090d12"
-    )
-
-    draw.text(
-        (25, 563),
-        "WARNING // 모든 현장 정보는 수사 기록의 일부입니다.",
-        fill="#d9e0e7"
-    )
-
-    return img
+if "ending" not in st.session_state:
+    st.session_state.ending = ""
 
 
-scene = make_scene()
-
-
-# =========================================================
-# 데이터
-# =========================================================
+# ============================================================
+# 사건 데이터
+# ============================================================
 
 suspects = {
 
     "김민재": {
-        "직업": "피해자의 회사 동료",
-        "설명": "사건 당일 피해자와 마지막으로 통화한 사람.",
-        "의심": "승진 문제로 피해자와 크게 다툰 적이 있음."
+        "role":"피해자의 회사 동료",
+        "desc":"사건 당일 피해자와 마지막으로 통화한 동료.",
+        "secret":"승진 문제로 피해자와 크게 다툰 적이 있다."
     },
 
     "박서연": {
-        "직업": "피해자의 전 여자친구",
-        "설명": "헤어진 뒤에도 피해자와 연락을 주고받음.",
-        "의심": "사건 당일 밤 피해자에게 세 차례 전화."
+        "role":"피해자의 전 여자친구",
+        "desc":"헤어진 뒤에도 피해자와 연락을 주고받았다.",
+        "secret":"사건 당일 피해자에게 세 번 전화했다."
     },
 
     "최도윤": {
-        "직업": "건물 관리인",
-        "설명": "건물 출입 시스템과 CCTV를 관리함.",
-        "의심": "사건 시간대 CCTV 기록에 이상이 발생."
+        "role":"건물 관리인",
+        "desc":"건물 출입 시스템과 CCTV를 관리한다.",
+        "secret":"CCTV 관리자 권한을 가지고 있다."
     },
 
     "한유진": {
-        "직업": "피해자의 동생",
-        "설명": "피해자와 가장 가까운 가족.",
-        "의심": "가족 재산 문제로 피해자와 갈등."
+        "role":"피해자의 동생",
+        "desc":"피해자와 가족 문제로 갈등이 있었다.",
+        "secret":"집의 예비 열쇠를 가지고 있었다."
     }
 }
 
 
-questions = [
+answers = [
 
-    {
-        "키워드": ["최도윤", "도윤", "관리인"],
-        "답": "YES",
-        "단서": "최도윤은 건물 CCTV 관리 프로그램의 관리자 권한을 가지고 있었다.",
-        "점수": 10
-    },
+    (
+        ["최도윤","도윤","관리인"],
+        "YES",
+        "최도윤은 건물 CCTV 관리자 권한을 가지고 있었습니다.",
+        10
+    ),
 
-    {
-        "키워드": ["cctv", "카메라", "영상"],
-        "답": "NO",
-        "단서": "CCTV에는 정확히 11분 38초의 영상 공백이 존재한다.",
-        "점수": 10
-    },
+    (
+        ["cctv","CCTV","카메라"],
+        "NO",
+        "CCTV에는 정확히 11분 38초의 영상 공백이 존재합니다.",
+        10
+    ),
 
-    {
-        "키워드": ["출입", "기록"],
-        "답": "YES",
-        "단서": "사건 발생 직전 출입 기록 하나가 시스템에서 삭제되어 있었다.",
-        "점수": 9
-    },
+    (
+        ["출입","기록"],
+        "YES",
+        "사건 직전 출입 기록 하나가 시스템에서 삭제되어 있었습니다.",
+        10
+    ),
 
-    {
-        "키워드": ["창문"],
-        "답": "NO",
-        "단서": "창문에는 외부에서 침입한 흔적이 전혀 없다.",
-        "점수": 7
-    },
+    (
+        ["창문"],
+        "NO",
+        "창문에는 외부에서 침입한 흔적이 없습니다.",
+        6
+    ),
 
-    {
-        "키워드": ["문", "현관"],
-        "답": "NO",
-        "단서": "현관문에는 강제 침입 흔적이 없다.",
-        "점수": 7
-    },
+    (
+        ["현관","문"],
+        "NO",
+        "현관문에는 강제 침입 흔적이 없습니다.",
+        6
+    ),
 
-    {
-        "키워드": ["김민재", "민재"],
-        "답": "YES",
-        "단서": "김민재는 밤 10시 47분 피해자와 통화했다.",
-        "점수": 5
-    },
+    (
+        ["김민재","민재"],
+        "YES",
+        "김민재는 밤 10시 47분 피해자와 통화했습니다.",
+        5
+    ),
 
-    {
-        "키워드": ["박서연", "서연"],
-        "답": "YES",
-        "단서": "박서연은 사건 당일 밤 피해자에게 세 번 전화했다.",
-        "점수": 5
-    },
+    (
+        ["박서연","서연"],
+        "YES",
+        "박서연은 사건 당일 밤 피해자에게 세 차례 전화했습니다.",
+        5
+    ),
 
-    {
-        "키워드": ["한유진", "유진", "동생"],
-        "답": "YES",
-        "단서": "한유진은 피해자의 친동생이며 예비 열쇠를 가지고 있었다.",
-        "점수": 8
-    },
+    (
+        ["한유진","유진","동생"],
+        "YES",
+        "한유진은 피해자의 친동생이며 예비 열쇠를 가지고 있습니다.",
+        8
+    ),
 
-    {
-        "키워드": ["전화", "통화"],
-        "답": "YES",
-        "단서": "피해자의 마지막 통화 상대는 네 명의 용의자 중 누구도 아니었다.",
-        "점수": 8
-    },
+    (
+        ["전화","통화"],
+        "YES",
+        "피해자의 마지막 통화 상대는 네 명의 용의자 중 누구도 아닙니다.",
+        8
+    ),
 
-    {
-        "키워드": ["usb", "USB"],
-        "답": "YES",
-        "단서": "책상 아래에서 검은색 USB가 발견됐다.",
-        "점수": 8
-    },
+    (
+        ["usb","USB"],
+        "YES",
+        "책상 아래에서 검은색 USB가 발견됐습니다.",
+        8
+    ),
 
-    {
-        "키워드": ["지문"],
-        "답": "NO",
-        "단서": "USB 표면은 누군가 깨끗하게 닦아놓은 상태였다.",
-        "점수": 6
-    },
+    (
+        ["지문"],
+        "NO",
+        "USB 표면은 누군가 깨끗하게 닦아놓은 상태였습니다.",
+        6
+    ),
 
-    {
-        "키워드": ["돈", "재산"],
-        "답": "YES",
-        "단서": "피해자의 휴대폰에서 돈 문제를 암시하는 메시지가 발견됐다.",
-        "점수": 6
-    },
+    (
+        ["돈","재산"],
+        "YES",
+        "피해자의 휴대폰에는 돈 문제를 암시하는 메시지가 남아 있습니다.",
+        6
+    ),
 
-    {
-        "키워드": ["메시지", "문자"],
-        "답": "YES",
-        "단서": "휴대폰 백업에서 삭제된 메시지 일부가 복구됐다.",
-        "점수": 8
-    },
+    (
+        ["메시지","문자"],
+        "YES",
+        "삭제된 메시지 일부가 복구되었습니다.",
+        8
+    ),
 
-    {
-        "키워드": ["알리바이"],
-        "답": "NO",
-        "단서": "네 명의 용의자 모두 알리바이에 작은 구멍이 존재한다.",
-        "점수": 10
-    },
+    (
+        ["알리바이"],
+        "NO",
+        "네 명의 용의자 모두 알리바이에 작은 구멍이 존재합니다.",
+        8
+    ),
 
-    {
-        "키워드": ["최도윤", "알리바이"],
-        "답": "NO",
-        "단서": "최도윤의 알리바이는 CCTV 공백 시간과 정확히 겹친다.",
-        "점수": 12
-    },
+    (
+        ["최도윤","알리바이"],
+        "NO",
+        "최도윤의 알리바이는 CCTV 공백 시간과 정확히 겹칩니다.",
+        12
+    ),
 
-    {
-        "키워드": ["최도윤", "접속"],
-        "답": "YES",
-        "단서": "관리실 컴퓨터 접속 기록에 최도윤의 계정이 남아 있었다.",
-        "점수": 12
-    },
+    (
+        ["최도윤","접속"],
+        "YES",
+        "관리실 컴퓨터 접속 기록에 최도윤의 계정이 남아 있습니다.",
+        12
+    ),
 
-    {
-        "키워드": ["김민재", "알리바이"],
-        "답": "NO",
-        "단서": "김민재가 제출한 영수증의 시간에는 조작 가능성이 있다.",
-        "점수": 7
-    },
+    (
+        ["열쇠"],
+        "YES",
+        "한유진은 가족용 예비 열쇠를 가지고 있습니다.",
+        8
+    ),
 
-    {
-        "키워드": ["박서연", "알리바이"],
-        "답": "NO",
-        "단서": "박서연의 알리바이를 증명하는 사람은 친구 한 명뿐이었다.",
-        "점수": 7
-    },
+    (
+        ["범인"],
+        "UNKNOWN",
+        "현재 증거만으로는 범인을 단정하면 안 됩니다.",
+        3
+    )
 
-    {
-        "키워드": ["한유진", "알리바이"],
-        "답": "NO",
-        "단서": "한유진의 휴대폰 위치 기록에서 이동 흔적이 발견됐다.",
-        "점수": 9
-    },
-
-    {
-        "키워드": ["열쇠"],
-        "답": "YES",
-        "단서": "한유진은 가족용 예비 열쇠를 가지고 있었다.",
-        "점수": 9
-    }
 ]
 
 
-# =========================================================
-# 상단 제목
-# =========================================================
+# ============================================================
+# 사건 사진
+# SVG로 직접 제작
+# ============================================================
 
-st.markdown(
-    """
-    <div class="case-header">
-        <div class="case-title">🕵️ 예스노 탐정</div>
-        <div class="case-sub">
-            CASE 001 · 잠긴 방의 진실
+scene_svg = """
+<svg width="100%" height="100%" viewBox="0 0 1000 620"
+     xmlns="http://www.w3.org/2000/svg">
+
+<!-- 배경 -->
+<rect width="1000" height="620" fill="#10161d"/>
+
+<!-- 벽 -->
+<rect x="0" y="0" width="1000" height="400"
+      fill="#1a222b"/>
+
+<!-- 벽 그림자 -->
+<rect x="0" y="350" width="1000" height="50"
+      fill="#151b21"/>
+
+<!-- 바닥 -->
+<rect x="0" y="400" width="1000" height="220"
+      fill="#252c32"/>
+
+<!-- 바닥 타일 -->
+<path d="M0 455 L1000 455
+         M0 510 L1000 510
+         M0 565 L1000 565"
+      stroke="#343d44"
+      stroke-width="2"/>
+
+<path d="M150 400 L100 620
+         M330 400 L300 620
+         M500 400 L500 620
+         M680 400 L710 620
+         M850 400 L920 620"
+      stroke="#303940"
+      stroke-width="2"/>
+
+
+<!-- 창문 -->
+<rect x="55" y="60" width="265" height="210"
+      rx="5"
+      fill="#0c2535"
+      stroke="#657580"
+      stroke-width="7"/>
+
+<rect x="70" y="75" width="235" height="180"
+      fill="#102c3d"/>
+
+<line x1="187" y1="75" x2="187" y2="255"
+      stroke="#657580" stroke-width="5"/>
+
+<line x1="70" y1="165" x2="305" y2="165"
+      stroke="#657580" stroke-width="5"/>
+
+<!-- 창밖 빛 -->
+<polygon points="75,90 175,90 175,150 75,130"
+         fill="#1e4355" opacity="0.8"/>
+
+
+<!-- 액자 -->
+<rect x="410" y="45" width="200" height="150"
+      fill="#101418"
+      stroke="#555f66"
+      stroke-width="7"/>
+
+<rect x="430" y="65" width="160" height="110"
+      fill="#2b3033"/>
+
+<!-- 가족사진 실루엣 -->
+<circle cx="475" cy="110" r="25" fill="#101418"/>
+<circle cx="545" cy="105" r="25" fill="#101418"/>
+
+<path d="M445 160 Q475 125 505 160
+         M515 160 Q545 120 575 160"
+      fill="#101418"/>
+
+
+<!-- 문 -->
+<rect x="765" y="65" width="180" height="335"
+      fill="#151b20"
+      stroke="#69757e"
+      stroke-width="7"/>
+
+<rect x="785" y="85" width="140" height="285"
+      fill="#20272d"
+      stroke="#4b555d"
+      stroke-width="3"/>
+
+<circle cx="895" cy="235" r="12"
+        fill="#b6a06a"/>
+
+
+<!-- 책상 -->
+<rect x="390" y="260" width="285" height="32"
+      rx="4"
+      fill="#5a4334"/>
+
+<rect x="410" y="292" width="25" height="155"
+      fill="#443328"/>
+
+<rect x="630" y="292" width="25" height="155"
+      fill="#443328"/>
+
+
+<!-- 램프 -->
+<rect x="515" y="175" width="10" height="85"
+      fill="#b99b62"/>
+
+<path d="M465 175 L575 175 L550 215 L490 215 Z"
+      fill="#d2b875"/>
+
+<ellipse cx="520" cy="220" rx="38" ry="8"
+         fill="#c3a966"/>
+
+
+<!-- 人物 / 쓰러진 사람 -->
+<ellipse cx="325" cy="385"
+         rx="48" ry="43"
+         fill="#111519"/>
+
+<path d="
+M345 410
+Q410 405 490 455
+L570 505
+L530 550
+L450 510
+L360 470
+L275 445
+Z"
+fill="#111519"/>
+
+<!-- 팔 -->
+<path d="M370 430 L275 500"
+      stroke="#0d1115"
+      stroke-width="38"
+      stroke-linecap="round"/>
+
+<path d="M445 445 L555 500"
+      stroke="#0d1115"
+      stroke-width="38"
+      stroke-linecap="round"/>
+
+<!-- 다리 -->
+<path d="M475 495 L650 565"
+      stroke="#0c1014"
+      stroke-width="48"
+      stroke-linecap="round"/>
+
+<path d="M400 485 L270 565"
+      stroke="#0c1014"
+      stroke-width="48"
+      stroke-linecap="round"/>
+
+
+<!-- 바닥 혈흔 느낌 -->
+<ellipse cx="325" cy="500"
+         rx="65" ry="14"
+         fill="#57252a"
+         opacity="0.7"/>
+
+
+<!-- 증거 A -->
+<circle cx="270" cy="500" r="23"
+        fill="#b63139"
+        stroke="white"
+        stroke-width="2"/>
+
+<text x="262" y="508"
+      fill="white"
+      font-size="24"
+      font-weight="bold">A</text>
+
+
+<!-- 증거 B -->
+<circle cx="600" cy="440" r="23"
+        fill="#b63139"
+        stroke="white"
+        stroke-width="2"/>
+
+<text x="592" y="448"
+      fill="white"
+      font-size="24"
+      font-weight="bold">B</text>
+
+
+<!-- 증거 C -->
+<circle cx="850" cy="345" r="23"
+        fill="#b63139"
+        stroke="white"
+        stroke-width="2"/>
+
+<text x="842" y="353"
+      fill="white"
+      font-size="24"
+      font-weight="bold">C</text>
+
+
+<!-- 증거 D -->
+<circle cx="185" cy="300" r="23"
+        fill="#b63139"
+        stroke="white"
+        stroke-width="2"/>
+
+<text x="177" y="308"
+      fill="white"
+      font-size="24"
+      font-weight="bold">D</text>
+
+
+<!-- 상단 사건 태그 -->
+<rect x="22" y="18"
+      width="280"
+      height="42"
+      rx="5"
+      fill="#0b1015"
+      stroke="#7a8994"/>
+
+<text x="40" y="45"
+      fill="#e7edf2"
+      font-size="20"
+      font-family="Arial"
+      font-weight="bold">
+CASE 001 · CRIME SCENE
+</text>
+
+
+<!-- 하단 현장 경고 -->
+<rect x="0" y="575"
+      width="1000"
+      height="45"
+      fill="#080b0e"/>
+
+<text x="25" y="604"
+      fill="#b8c5cf"
+      font-size="18">
+현장 보존 기록 · 외부 침입 흔적 없음 · CCTV 11분 38초 공백
+</text>
+
+</svg>
+"""
+
+
+# ============================================================
+# 상단
+# ============================================================
+
+st.markdown("""
+<div style="
+display:flex;
+align-items:center;
+justify-content:space-between;
+height:48px;
+border-bottom:1px solid #26323e;
+margin-bottom:8px;
+">
+
+<div>
+<span style="
+font-size:25px;
+font-weight:900;
+color:white;
+">🕵️ 예스노 탐정</span>
+
+<span style="
+font-size:12px;
+color:#7890a5;
+margin-left:12px;
+">
+CASE 001 · 잠긴 방의 진실
+</span>
+</div>
+
+<div style="
+font-size:12px;
+color:#9eb2c4;
+">
+수사관 모드 · 사건 진행 중
+</div>
+
+</div>
+""", unsafe_allow_html=True)
+
+
+# ============================================================
+# 상단 통계
+# ============================================================
+
+s1, s2, s3, s4 = st.columns(4)
+
+with s1:
+    st.markdown(
+        f"""
+        <div style="
+        background:#0e151d;
+        border:1px solid #263746;
+        border-radius:6px;
+        padding:7px;
+        text-align:center;
+        height:53px;
+        ">
+        <div style="font-size:10px;color:#718598;">질문</div>
+        <b style="font-size:20px;color:white;">
+        {st.session_state.questions}/15
+        </b>
         </div>
-    </div>
-    """,
-    unsafe_allow_html=True
+        """,
+        unsafe_allow_html=True
+    )
+
+with s2:
+    st.markdown(
+        f"""
+        <div style="
+        background:#0e151d;
+        border:1px solid #263746;
+        border-radius:6px;
+        padding:7px;
+        text-align:center;
+        height:53px;
+        ">
+        <div style="font-size:10px;color:#718598;">수사 점수</div>
+        <b style="font-size:20px;color:white;">
+        {st.session_state.score}
+        </b>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with s3:
+    st.markdown(
+        f"""
+        <div style="
+        background:#0e151d;
+        border:1px solid #263746;
+        border-radius:6px;
+        padding:7px;
+        text-align:center;
+        height:53px;
+        ">
+        <div style="font-size:10px;color:#718598;">신뢰도</div>
+        <b style="font-size:20px;color:#70d4a0;">
+        {st.session_state.trust}%
+        </b>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with s4:
+    st.markdown(
+        f"""
+        <div style="
+        background:#0e151d;
+        border:1px solid #263746;
+        border-radius:6px;
+        padding:7px;
+        text-align:center;
+        height:53px;
+        ">
+        <div style="font-size:10px;color:#718598;">확보 단서</div>
+        <b style="font-size:20px;color:#67baff;">
+        {len(st.session_state.clues)}
+        </b>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+st.write("")
+
+
+# ============================================================
+# 메인 3분할
+# ============================================================
+
+left, middle, right = st.columns(
+    [1.55, 1, 0.95],
+    gap="small"
 )
 
 
-# =========================================================
-# 사건 현장
-# =========================================================
-
-st.subheader("📸 사건 현장")
-
-st.image(
-    scene,
-    use_container_width=True
-)
-
-st.caption(
-    "현장 사진을 자세히 살펴보세요. 빨간색 A/B/C/D 표시는 조사할 만한 지점입니다."
-)
-
-
-# =========================================================
-# 사건 개요 + 현장 정보
-# =========================================================
-
-left, right = st.columns([1.3, 1])
-
+# ============================================================
+# LEFT — 사건 현장
+# ============================================================
 
 with left:
 
-    st.subheader("📋 사건 개요")
+    st.markdown("""
+    <div style="
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:5px;
+    ">
+    <b style="font-size:19px;color:white;">
+    📸 사건 현장
+    </b>
+    <span style="
+    font-size:10px;
+    color:#7e92a4;
+    ">
+    현장 사진 #001
+    </span>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.info(
-        """
-        **새벽 1시 18분.**
-
-        한 남자가 자신의 집에서 의식을 잃은 채 발견되었습니다.
-
-        현관문은 잠겨 있었습니다.
-
-        창문도 닫혀 있었습니다.
-
-        외부 침입 흔적은 발견되지 않았습니다.
-
-        그런데 현장에는 이상한 점이 있었습니다.
-
-        **사건과 관련된 네 명의 사람 모두 서로 다른 거짓말을 하고 있었습니다.**
-
-        당신의 임무는 단순히 범인을 찾는 것이 아닙니다.
-
-        **누가 거짓말을 하고 있는지,
-        왜 거짓말을 하고 있는지,
-        그리고 그 거짓말 속에서 실제 범행의 흔적을 찾아야 합니다.**
-        """
+    components.html(
+        scene_svg,
+        height=470,
+        scrolling=False
     )
 
+    st.markdown("""
+    <div style="
+    margin-top:5px;
+    background:#0d141b;
+    border:1px solid #253440;
+    border-radius:5px;
+    padding:7px 10px;
+    font-size:11px;
+    color:#9eb0bf;
+    ">
+    🔴 <b>A</b> 쓰러진 피해자　
+    🔴 <b>B</b> 책상 주변　
+    🔴 <b>C</b> 현관　
+    🔴 <b>D</b> 창문
+    </div>
+    """, unsafe_allow_html=True)
 
-with right:
 
-    st.subheader("🔍 현장 기록")
+# ============================================================
+# MIDDLE — 심문
+# ============================================================
 
-    st.write("🕐 발견 시각: 새벽 1시 18분")
-    st.write("🚪 현관문: 잠겨 있음")
-    st.write("🪟 창문: 닫혀 있음")
-    st.write("📹 CCTV: 11분 38초 공백")
-    st.write("💾 삭제된 출입 기록: 1건")
-    st.write("🔑 예비 열쇠: 존재")
-    st.write("💻 관리실 컴퓨터: 접속 기록 존재")
+with middle:
 
+    st.markdown("""
+    <div style="
+    font-size:19px;
+    font-weight:900;
+    color:white;
+    margin-bottom:4px;
+    ">
+    🔎 기록실 심문
+    </div>
 
-# =========================================================
-# 상태
-# =========================================================
+    <div style="
+    font-size:11px;
+    color:#7f93a5;
+    margin-bottom:7px;
+    ">
+    용의자와 사건에 대해 질문하세요.
+    대답은 항상 진실이라고 할 수 없습니다.
+    </div>
+    """, unsafe_allow_html=True)
 
-st.divider()
-
-a, b, c, d = st.columns(4)
-
-with a:
-    st.markdown(
-        f"""
-        <div class="stat">
-        <div class="stat-label">질문</div>
-        <div class="stat-value">
-        {st.session_state.question_count}/15
-        </div>
-        </div>
-        """,
-        unsafe_allow_html=True
+    question = st.text_input(
+        "질문",
+        placeholder="예: 최도윤은 CCTV를 관리할 수 있었나요?",
+        label_visibility="collapsed",
+        key="question"
     )
 
-with b:
-    st.markdown(
-        f"""
-        <div class="stat">
-        <div class="stat-label">수사 점수</div>
-        <div class="stat-value">
-        {st.session_state.score}
-        </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    if st.button("🔍 질문하기", key="ask"):
 
-with c:
-    st.markdown(
-        f"""
-        <div class="stat">
-        <div class="stat-label">신뢰도</div>
-        <div class="stat-value">
-        {st.session_state.trust}%
-        </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+        if not question.strip():
 
-with d:
-    st.markdown(
-        f"""
-        <div class="stat">
-        <div class="stat-label">확보 단서</div>
-        <div class="stat-value">
-        {len(st.session_state.clues)}
-        </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+            st.warning("질문을 입력하세요.")
 
+        elif st.session_state.questions >= 15:
 
-# =========================================================
-# 용의자
-# =========================================================
-
-st.divider()
-
-st.subheader("👤 용의자")
-
-cols = st.columns(4)
-
-for index, (name, info) in enumerate(suspects.items()):
-
-    with cols[index]:
-
-        with st.container(border=True):
-
-            st.markdown(f"### {name}")
-
-            st.caption(info["직업"])
-
-            st.write(info["설명"])
-
-            st.warning(
-                "의심점\n\n" + info["의심"]
-            )
-
-
-# =========================================================
-# 질문
-# =========================================================
-
-st.divider()
-
-st.subheader("🔎 용의자에게 질문하기")
-
-st.write(
-    "질문은 자유롭게 입력할 수 있습니다. "
-    "예: `최도윤은 CCTV를 관리할 수 있었습니까?`"
-)
-
-question = st.text_input(
-    "질문",
-    placeholder="궁금한 것을 질문하세요...",
-    key="question_input"
-)
-
-if st.button("🔍 질문하기"):
-
-    if not question.strip():
-
-        st.warning("질문을 입력해주세요.")
-
-    elif st.session_state.question_count >= 15:
-
-        st.error("질문 기회를 모두 사용했습니다.")
-
-    else:
-
-        found = None
-
-        for q in questions:
-
-            if q["질문"] if "질문" in q else False:
-                pass
-
-            for keyword in q["키워드"]:
-
-                if keyword.lower() in question.lower():
-
-                    found = q
-                    break
-
-            if found:
-                break
-
-        if found is None:
-
-            found = {
-                "답": random.choice(["YES", "NO", "UNKNOWN"]),
-                "단서": "현재 증거만으로는 이 질문에 확실한 결론을 내릴 수 없다.",
-                "점수": 2
-            }
-
-        st.session_state.question_count += 1
-        st.session_state.score += found["점수"]
-
-        if found["답"] == "NO":
-            st.session_state.trust -= 2
-
-        st.session_state.history.append(
-            {
-                "질문": question,
-                "답": found["답"],
-                "단서": found["단서"]
-            }
-        )
-
-        if found["단서"] not in st.session_state.clues:
-            st.session_state.clues.append(
-                found["단서"]
-            )
-
-        st.rerun()
-
-
-# =========================================================
-# 최근 답변
-# =========================================================
-
-if st.session_state.history:
-
-    latest = st.session_state.history[-1]
-
-    st.divider()
-
-    st.subheader("📢 최근 답변")
-
-    if latest["답"] == "YES":
-
-        st.success("🟢 YES · 그렇습니다.")
-
-    elif latest["답"] == "NO":
-
-        st.error("🔴 NO · 아닙니다.")
-
-    else:
-
-        st.warning("🟡 UNKNOWN · 확실하지 않습니다.")
-
-    st.info(
-        "새로운 단서\n\n" + latest["단서"]
-    )
-
-
-# =========================================================
-# 단서
-# =========================================================
-
-st.divider()
-
-st.subheader("📁 확보한 단서")
-
-if not st.session_state.clues:
-
-    st.info(
-        "아직 확보한 단서가 없습니다. "
-        "사건 현장을 보고 질문을 시작하세요."
-    )
-
-else:
-
-    for i, clue in enumerate(
-        st.session_state.clues,
-        1
-    ):
-
-        st.markdown(
-            f"""
-            <div class="clue">
-                <div class="evidence-number">
-                    EVIDENCE #{i}
-                </div>
-                <br>
-                {clue}
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-
-# =========================================================
-# 수사 기록
-# =========================================================
-
-if st.session_state.history:
-
-    st.divider()
-
-    st.subheader("📜 수사 기록")
-
-    for i, record in enumerate(
-        st.session_state.history,
-        1
-    ):
-
-        with st.expander(
-            f"수사 기록 #{i} · {record['답']}"
-        ):
-
-            st.write(
-                "**질문:**",
-                record["질문"]
-            )
-
-            st.write(
-                "**답변:**",
-                record["답"]
-            )
-
-            st.write(
-                "**단서:**",
-                record["단서"]
-            )
-
-
-# =========================================================
-# 최종 추리
-# =========================================================
-
-st.divider()
-
-st.subheader("🧠 최종 추리")
-
-if not st.session_state.game_over:
-
-    st.write(
-        "충분한 증거를 모았다고 생각한다면 "
-        "범인을 지목하세요."
-    )
-
-    suspect = st.radio(
-        "누가 범인이라고 생각합니까?",
-        list(suspects.keys()),
-        horizontal=True
-    )
-
-    reason = st.text_area(
-        "당신의 추리",
-        placeholder=(
-            "예: CCTV 공백 시간과 관리실 접속 기록이 "
-            "최도윤의 알리바이와 겹친다."
-        ),
-        height=120
-    )
-
-    if st.button("🚨 최종 추리 제출"):
-
-        if len(st.session_state.clues) < 3:
-
-            st.warning(
-                "단서가 부족합니다. "
-                "최소 3개의 단서를 확보하세요."
-            )
-
-        elif len(reason.strip()) < 5:
-
-            st.warning(
-                "추리 이유를 적어주세요."
-            )
+            st.error("질문 기회를 모두 사용했습니다.")
 
         else:
 
-            if suspect == "최도윤":
+            found = None
 
-                if st.session_state.score >= 60:
+            for keywords, answer, clue, score in answers:
 
-                    st.session_state.ending = "TRUE"
+                for keyword in keywords:
 
-                else:
+                    if keyword.lower() in question.lower():
 
-                    st.session_state.ending = "PARTIAL"
+                        found = (
+                            answer,
+                            clue,
+                            score
+                        )
+                        break
 
-            else:
+                if found:
+                    break
 
-                st.session_state.ending = "BAD"
+            if found is None:
 
-            st.session_state.game_over = True
+                found = (
+                    random.choice(
+                        ["YES", "NO", "UNKNOWN"]
+                    ),
+                    "현재 증거만으로는 확실한 결론을 내릴 수 없습니다.",
+                    2
+                )
+
+            answer, clue, score = found
+
+            st.session_state.questions += 1
+            st.session_state.score += score
+
+            if answer == "NO":
+                st.session_state.trust = max(
+                    0,
+                    st.session_state.trust - 2
+                )
+
+            if clue not in st.session_state.clues:
+                st.session_state.clues.append(clue)
+
+            st.session_state.history.append(
+                {
+                    "q":question,
+                    "a":answer,
+                    "clue":clue
+                }
+            )
 
             st.rerun()
 
 
-# =========================================================
-# 엔딩
-# =========================================================
+    # 최근 답변
 
-if st.session_state.game_over:
+    if st.session_state.history:
 
-    st.divider()
+        latest = st.session_state.history[-1]
 
-    if st.session_state.ending == "TRUE":
+        color = {
+            "YES":"#6fd3a0",
+            "NO":"#ff7373",
+            "UNKNOWN":"#e6c66c"
+        }.get(latest["a"], "white")
 
         st.markdown(
-            """
-            <div class="ending-true">
+            f"""
+            <div style="
+            background:#0d1822;
+            border:1px solid #263b4d;
+            border-radius:6px;
+            padding:10px;
+            margin-top:8px;
+            min-height:105px;
+            ">
 
-            # 🏆 TRUE ENDING
+            <div style="
+            font-size:10px;
+            color:#71889a;
+            ">
+            LAST RESPONSE
+            </div>
 
-            ## 사건 해결
+            <div style="
+            color:{color};
+            font-size:21px;
+            font-weight:900;
+            margin:3px 0;
+            ">
+            {latest["a"]}
+            </div>
 
-            당신의 추리는 정확했습니다.
-
-            진짜 범인은 **최도윤**.
-
-            그는 건물 관리인이라는 자신의 권한을 이용해
-            CCTV와 출입 기록에 접근했습니다.
-
-            사건 시간대에 발생한 11분 38초의 CCTV 공백.
-
-            삭제된 출입 기록.
-
-            관리실 컴퓨터에 남아 있는 접속 기록.
-
-            이 세 가지 증거는 우연이 아니었습니다.
-
-            다른 용의자들도 거짓말을 하고 있었습니다.
-
-            하지만 그들의 거짓말은 범행을 숨기기 위한 것이 아니라
-            각자의 사생활을 숨기기 위한 것이었습니다.
-
-            당신은 그 차이를 찾아냈습니다.
-
-            **CASE 001 — SOLVED**
+            <div style="
+            font-size:12px;
+            line-height:1.5;
+            color:#d2dce4;
+            ">
+            {latest["clue"]}
+            </div>
 
             </div>
             """,
             unsafe_allow_html=True
+        )
+
+    else:
+
+        st.markdown("""
+        <div style="
+        background:#0d1822;
+        border:1px solid #263b4d;
+        border-radius:6px;
+        padding:12px;
+        margin-top:8px;
+        height:105px;
+        color:#7f95a7;
+        font-size:12px;
+        ">
+        아직 질문하지 않았습니다.<br><br>
+        사건 사진과 용의자를 먼저 확인하세요.
+        </div>
+        """, unsafe_allow_html=True)
+
+
+    # 최근 질문 기록
+
+    st.markdown("""
+    <div style="
+    font-size:13px;
+    font-weight:800;
+    color:white;
+    margin-top:10px;
+    margin-bottom:3px;
+    ">
+    📜 최근 수사 기록
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.session_state.history:
+
+        recent = st.session_state.history[-3:]
+
+        for i, record in enumerate(
+            reversed(recent),
+            1
+        ):
+
+            st.markdown(
+                f"""
+                <div style="
+                background:#0a1118;
+                border-bottom:1px solid #1d2a35;
+                padding:5px;
+                font-size:10px;
+                color:#a9b8c4;
+                ">
+                <b style="color:#6db9ef;">
+                Q
+                </b>
+                {record["q"][:38]}
+                <span style="float:right;">
+                {record["a"]}
+                </span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+
+# ============================================================
+# RIGHT — 용의자
+# ============================================================
+
+with right:
+
+    st.markdown("""
+    <div style="
+    font-size:19px;
+    font-weight:900;
+    color:white;
+    margin-bottom:5px;
+    ">
+    👤 용의자
+    </div>
+    """, unsafe_allow_html=True)
+
+    for name, data in suspects.items():
+
+        st.markdown(
+            f"""
+            <div style="
+            background:#0d141b;
+            border:1px solid #263542;
+            border-radius:6px;
+            padding:8px;
+            margin-bottom:5px;
+            ">
+
+            <div style="
+            font-size:16px;
+            font-weight:900;
+            color:#f2f5f7;
+            ">
+            {name}
+            </div>
+
+            <div style="
+            font-size:9px;
+            color:#70879a;
+            margin-top:2px;
+            ">
+            {data["role"]}
+            </div>
+
+            <div style="
+            font-size:10px;
+            color:#b8c6d1;
+            margin-top:5px;
+            line-height:1.35;
+            ">
+            {data["desc"]}
+            </div>
+
+            <div style="
+            background:#171e0d;
+            color:#d5d99b;
+            border-radius:3px;
+            padding:5px;
+            margin-top:5px;
+            font-size:9px;
+            ">
+            의심점 · {data["secret"]}
+            </div>
+
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+
+# ============================================================
+# 하단 단서
+# ============================================================
+
+st.markdown("""
+<div style="
+border-top:1px solid #25313c;
+margin-top:7px;
+padding-top:7px;
+display:flex;
+align-items:center;
+">
+<div style="
+font-size:14px;
+font-weight:900;
+color:white;
+margin-right:12px;
+">
+📁 확보 단서
+</div>
+""", unsafe_allow_html=True)
+
+if st.session_state.clues:
+
+    clue_text = ""
+
+    for i, clue in enumerate(
+        st.session_state.clues[-5:],
+        1
+    ):
+
+        clue_text += f"""
+        <span style="
+        display:inline-block;
+        background:#101a23;
+        border:1px solid #294052;
+        border-radius:4px;
+        padding:5px 7px;
+        margin-right:4px;
+        font-size:9px;
+        color:#a9c8dd;
+        ">
+        {i}. {clue[:34]}
+        </span>
+        """
+
+    st.markdown(
+        clue_text,
+        unsafe_allow_html=True
+    )
+
+else:
+
+    st.markdown(
+        """
+        <span style="
+        font-size:10px;
+        color:#617383;
+        ">
+        아직 확보된 단서가 없습니다.
+        </span>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+# ============================================================
+# 최종 추리
+# ============================================================
+
+st.markdown("""
+<div style="
+border-top:1px solid #25313c;
+margin-top:7px;
+padding-top:5px;
+">
+</div>
+""", unsafe_allow_html=True)
+
+if not st.session_state.finished:
+
+    col1, col2, col3 = st.columns([1, 2, 1])
+
+    with col1:
+
+        suspect_choice = st.selectbox(
+            "범인",
+            list(suspects.keys()),
+            key="suspect"
+        )
+
+    with col2:
+
+        reason = st.text_input(
+            "최종 추리",
+            placeholder="왜 이 사람이 범인인지 한 줄로 설명하세요.",
+            key="reason"
+        )
+
+    with col3:
+
+        if st.button(
+            "🚨 최종 추리 제출",
+            key="finish"
+        ):
+
+            if len(st.session_state.clues) < 3:
+
+                st.warning(
+                    "단서를 최소 3개 확보하세요."
+                )
+
+            elif len(reason.strip()) < 3:
+
+                st.warning(
+                    "추리 이유를 적어주세요."
+                )
+
+            else:
+
+                st.session_state.finished = True
+
+                if (
+                    suspect_choice == "최도윤"
+                    and st.session_state.score >= 45
+                ):
+
+                    st.session_state.ending = "TRUE"
+
+                elif suspect_choice == "최도윤":
+
+                    st.session_state.ending = "PARTIAL"
+
+                else:
+
+                    st.session_state.ending = "BAD"
+
+                st.rerun()
+
+
+# ============================================================
+# 엔딩
+# ============================================================
+
+else:
+
+    if st.session_state.ending == "TRUE":
+
+        st.success(
+            "🏆 TRUE ENDING · 범인은 최도윤입니다. "
+            "CCTV 공백과 관리실 접속 기록이 결정적인 증거였습니다."
         )
 
     elif st.session_state.ending == "PARTIAL":
 
         st.warning(
-            """
-            # 🟡 PARTIAL ENDING
-
-            범인은 맞혔습니다.
-
-            하지만 결정적인 증거가 부족합니다.
-
-            최도윤을 의심한 방향은 정확했습니다.
-
-            하지만 경찰을 설득하기에는 증거가 부족했습니다.
-
-            조금 더 조사했다면 완벽하게 해결할 수 있었습니다.
-            """
+            "🟡 PARTIAL ENDING · 범인은 맞혔지만 결정적인 증거가 부족합니다."
         )
 
     else:
 
-        st.markdown(
-            """
-            <div class="ending-bad">
-
-            # 🔴 BAD ENDING
-
-            ## 잘못된 추리
-
-            당신은 잘못된 사람을 지목했습니다.
-
-            가장 수상해 보이는 사람과
-            진짜 범인은 같은 사람이 아니었습니다.
-
-            사건 기록을 다시 살펴보면
-            중요한 단서들이 다른 방향을 가리키고 있습니다.
-
-            탐정에게 가장 위험한 것은
-
-            **첫 번째로 떠오른 결론을 진실이라고 믿는 것.**
-
-            </div>
-            """,
-            unsafe_allow_html=True
+        st.error(
+            "🔴 BAD ENDING · 잘못된 사람을 지목했습니다. "
+            "사건 기록을 다시 살펴보세요."
         )
-
-    st.write("")
-
-    x, y = st.columns(2)
-
-    with x:
-
-        st.metric(
-            "최종 점수",
-            st.session_state.score
-        )
-
-    with y:
-
-        st.metric(
-            "확보 단서",
-            len(st.session_state.clues)
-        )
-
-    st.write("")
 
     if st.button("🔄 사건 다시 시작"):
 
         for key in list(st.session_state.keys()):
-
             del st.session_state[key]
 
         st.rerun()
 
 
-# =========================================================
-# 하단
-# =========================================================
+# ============================================================
+# 아주 작은 하단
+# ============================================================
 
-st.divider()
-
-st.caption(
-    "🕵️ 예스노 탐정 · CASE 001 · "
-    "모든 답은 단서가 되지만, 모든 단서가 진실은 아니다."
-)
+st.markdown("""
+<div style="
+text-align:center;
+color:#455563;
+font-size:8px;
+margin-top:2px;
+">
+예스노 탐정 · CASE 001 · 모든 단서가 진실을 말하는 것은 아니다.
+</div>
+""", unsafe_allow_html=True)
