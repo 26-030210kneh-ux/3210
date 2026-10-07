@@ -1,4 +1,5 @@
 import streamlit as st
+import re
 
 st.set_page_config(
     page_title="예스노 탐정",
@@ -6,32 +7,41 @@ st.set_page_config(
     layout="wide"
 )
 
-# -----------------------------
+# =========================================================
 # CSS
-# -----------------------------
+# =========================================================
+
 st.markdown("""
 <style>
+
 .stApp {
     background:#060b11;
-    color:white;
+    color:#edf6ff;
 }
 
 .block-container {
-    max-width:1400px;
-    padding-top:20px;
+    max-width:1450px;
+    padding-top:18px;
     padding-bottom:10px;
 }
 
-h1 {
-    font-size:42px !important;
-    margin-bottom:0 !important;
+header {
+    visibility:hidden;
+}
+
+#MainMenu {
+    visibility:hidden;
+}
+
+footer {
+    visibility:hidden;
 }
 
 .case-photo {
-    height:300px;
+    height:285px;
     border-radius:12px;
     background:
-    linear-gradient(rgba(0,0,0,.15),rgba(0,0,0,.75)),
+    linear-gradient(rgba(0,0,0,.15),rgba(0,0,0,.78)),
     url("https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1400&q=85")
     center/cover;
     position:relative;
@@ -40,252 +50,703 @@ h1 {
 .photo-title {
     position:absolute;
     bottom:20px;
-    left:25px;
-    font-size:30px;
+    left:24px;
+    font-size:29px;
     font-weight:900;
 }
 
 .photo-info {
     position:absolute;
-    bottom:58px;
-    left:25px;
-    color:#a9c9dd;
+    bottom:59px;
+    left:24px;
+    color:#b7cbd8;
+    font-size:12px;
 }
 
-.case-card {
-    background:#0d151e;
+.card {
+    background:#0c151e;
     border:1px solid #21394b;
     border-radius:10px;
-    padding:18px;
-    margin-top:12px;
+    padding:17px;
+    margin-top:10px;
+}
+
+.question-area {
+    background:#09131c;
+    border:1px solid #254357;
+    border-radius:10px;
+    padding:15px;
 }
 
 .answer {
-    background:#0b1823;
-    border:1px solid #25465c;
+    background:#081722;
+    border:1px solid #28516a;
     border-radius:8px;
-    padding:15px;
-    margin-top:12px;
+    padding:14px;
+    margin-top:10px;
 }
 
-.answer-yes {
-    color:#49d7ff;
-    font-size:22px;
+.yes {
+    color:#42d5ff;
+    font-size:23px;
     font-weight:900;
 }
 
-.answer-no {
-    color:#ffbd68;
-    font-size:22px;
+.no {
+    color:#ffc36b;
+    font-size:23px;
+    font-weight:900;
+}
+
+.unknown {
+    color:#b9a9ff;
+    font-size:23px;
     font-weight:900;
 }
 
 .clue {
-    background:#0c1821;
-    border-left:3px solid #38c8ff;
-    padding:9px;
+    background:#0b1720;
+    border-left:3px solid #43d3ff;
+    border-radius:5px;
+    padding:8px 10px;
     margin:5px 0;
-    border-radius:4px;
+    font-size:12px;
+}
+
+.hint {
+    background:#11172a;
+    border:1px solid #514b8c;
+    border-radius:8px;
+    padding:13px;
+    color:#ddd8ff;
+}
+
+.suspect {
+    background:#0b151e;
+    border:1px solid #203c50;
+    border-radius:8px;
+    padding:10px;
+    margin-bottom:7px;
 }
 
 .ending {
-    padding:25px;
-    border:2px solid #38c8ff;
+    background:#07151e;
+    border:2px solid #42d5ff;
     border-radius:12px;
-    background:#07141d;
+    padding:28px;
     text-align:center;
 }
 
-.ending h2 {
-    color:#50d8ff;
-}
-
-button {
-    min-height:42px !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
 
-# -----------------------------
-# 상태
-# -----------------------------
-if "question_count" not in st.session_state:
-    st.session_state.question_count = 0
+# =========================================================
+# STATE
+# =========================================================
 
-if "score" not in st.session_state:
-    st.session_state.score = 0
+defaults = {
+    "questions": 0,
+    "score": 0,
+    "clues": [],
+    "history": [],
+    "last_answer": None,
+    "hint_used": 0,
+    "ending": None
+}
 
-if "clues" not in st.session_state:
-    st.session_state.clues = []
-
-if "last_answer" not in st.session_state:
-    st.session_state.last_answer = None
-
-if "ending" not in st.session_state:
-    st.session_state.ending = None
+for key, value in defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
 
 
-# -----------------------------
-# 질문 데이터
-# -----------------------------
-questions = {
-    "현관에 들어온 흔적이 있습니까?": (
-        "아니오",
-        "현관문과 손잡이에는 강제로 들어온 흔적이 없습니다.",
-        "외부 침입 가능성이 낮다.",
-        5
-    ),
+# =========================================================
+# CASE
+# =========================================================
 
-    "피해자는 사건 전에 누군가와 통화했습니까?": (
-        "예",
-        "사건 직전 누군가와 통화한 기록이 확인됩니다.",
-        "피해자는 사건 직전 누군가와 연락했다.",
-        5
-    ),
+CASE_NAME = "잠긴 방의 진실"
 
-    "CCTV에 수상한 사람이 찍혔습니까?": (
-        "예",
-        "23시 41분 복도 CCTV에 모자를 쓴 사람이 찍혔습니다.",
-        "23:41 복도 CCTV에 수상한 인물이 등장했다.",
-        10
-    ),
-
-    "피해자의 휴대전화 기록이 삭제됐습니까?": (
-        "예",
-        "마지막 통화 기록 하나가 삭제되어 있습니다.",
-        "누군가 마지막 통화 기록을 삭제했다.",
-        10
-    ),
-
-    "범인은 피해자를 알고 있었습니까?": (
-        "예",
-        "강제 침입 흔적이 없으므로 피해자가 직접 문을 열어준 것으로 보입니다.",
-        "범인은 피해자와 아는 사이일 가능성이 높다.",
-        10
-    ),
-
-    "최도윤은 CCTV 사각지대를 알고 있었습니까?": (
-        "예",
-        "최도윤은 이 건물에서 6년째 살고 있어 CCTV 위치를 잘 알고 있었습니다.",
-        "최도윤은 CCTV 사각지대를 알고 있었다.",
-        10
-    ),
-
-    "박서연은 사건 당일 피해자에게 전화했습니까?": (
-        "예",
-        "23시 18분, 23시 21분, 23시 27분 총 세 번 전화했습니다.",
-        "박서연은 사건 직전 세 번 연락했다.",
-        5
-    ),
-
-    "김민재는 피해자와 다퉜습니까?": (
-        "예",
-        "사건 당일 오후 승진 문제로 큰 말다툼을 했습니다.",
-        "김민재에게 강한 동기가 있었다.",
-        5
-    ),
-
-    "현장에서 제3자의 지문이 발견됐습니까?": (
-        "예",
-        "피해자의 지문 외에 다른 사람의 지문이 발견됐습니다.",
-        "피해자 외 제3자의 지문이 발견됐다.",
-        10
-    ),
-
-    "창문으로 침입했습니까?": (
-        "아니오",
-        "창문은 안쪽에서 잠겨 있었습니다.",
-        "창문 침입 가능성이 없다.",
-        5
-    ),
-
-    "금품이 사라졌습니까?": (
-        "아니오",
-        "지갑과 귀중품은 그대로 남아 있습니다.",
-        "금품 목적의 범행이 아니다.",
-        5
-    ),
-
-    "범인은 사건 후 현장에 다시 왔습니까?": (
-        "예",
-        "사건 직후 현관 CCTV에 같은 인물로 보이는 사람이 다시 나타났습니다.",
-        "범인은 사건 후 현장을 다시 확인했다.",
-        15
-    ),
-
-    "CCTV에 이상한 공백이 있었습니까?": (
-        "예",
-        "두 카메라 사이에 정확히 17초의 영상 공백이 존재합니다.",
-        "17초짜리 CCTV 공백이 발견됐다.",
-        15
-    ),
-
-    "최도윤의 알리바이는 완벽합니까?": (
-        "아니오",
-        "최도윤은 계속 집에 있었다고 주장했지만 통신 기록과 맞지 않습니다.",
-        "최도윤의 알리바이에 모순이 있다.",
-        15
-    ),
-
-    "범인은 피해자에게 신뢰받던 사람입니까?": (
-        "예",
-        "피해자가 스스로 문을 열어준 정황이 확인됩니다.",
-        "범인은 피해자의 신뢰를 받고 있었다.",
-        10
-    )
+suspects = {
+    "김민재": {
+        "role": "피해자의 직장 동료",
+        "info": "승진 문제로 피해자와 크게 다퉜다.",
+        "danger": "높음",
+    },
+    "박서연": {
+        "role": "피해자의 전 여자친구",
+        "info": "사건 직전 피해자에게 세 번 전화했다.",
+        "danger": "중간",
+    },
+    "최도윤": {
+        "role": "피해자의 이웃",
+        "info": "건물 CCTV 위치와 사각지대를 잘 알고 있다.",
+        "danger": "매우 높음",
+    }
 }
 
 
-# -----------------------------
-# 제목
-# -----------------------------
+# =========================================================
+# DIRECT QUESTION ENGINE
+# =========================================================
+
+def answer_question(question):
+
+    q = question.strip().lower()
+
+    if not q:
+        return (
+            "불명",
+            "질문을 입력해주세요.",
+            None,
+            0
+        )
+
+    # -----------------------------------------
+    # 이상한 질문
+    # -----------------------------------------
+
+    nonsense = [
+        "문어",
+        "고양이",
+        "강아지",
+        "공룡",
+        "외계인",
+        "로봇",
+        "대통령",
+        "축구",
+        "게임",
+        "라면",
+        "치킨",
+        "날씨",
+        "내 이름",
+        "몇살"
+    ]
+
+    for word in nonsense:
+        if word in q:
+            return (
+                "아니오",
+                "아니오. 그 질문은 현재 사건과 관련이 없습니다.",
+                None,
+                0
+            )
+
+    # -----------------------------------------
+    # 현관 / 침입
+    # -----------------------------------------
+
+    if any(x in q for x in [
+        "현관",
+        "현관문",
+        "문을",
+        "문에",
+        "침입",
+        "들어온",
+        "들어왔",
+        "강제로"
+    ]):
+
+        if any(x in q for x in [
+            "흔적",
+            "침입",
+            "강제로",
+            "부서"
+        ]):
+
+            return (
+                "아니오",
+                "아니오. 현관문에는 강제로 침입한 흔적이 없습니다.",
+                "현관 강제 침입 흔적 없음",
+                5
+            )
+
+        return (
+            "예",
+            "예. 피해자는 사건 당시 현관문 근처에 있었습니다.",
+            "현관 주변에 피해자의 흔적 발견",
+            3
+        )
+
+    # -----------------------------------------
+    # 창문
+    # -----------------------------------------
+
+    if any(x in q for x in [
+        "창문",
+        "베란다",
+        "창으로",
+        "창을"
+    ]):
+
+        return (
+            "아니오",
+            "아니오. 창문은 내부에서 잠겨 있었고 외부 침입 흔적도 없습니다.",
+            "창문 침입 가능성 낮음",
+            5
+        )
+
+    # -----------------------------------------
+    # CCTV
+    # -----------------------------------------
+
+    if any(x in q for x in [
+        "cctv",
+        "씨씨티비",
+        "카메라",
+        "영상",
+        "녹화"
+    ]):
+
+        return (
+            "예",
+            "예. 23시 41분부터 약 17초 동안 CCTV에 이상한 공백이 있습니다.",
+            "CCTV에 17초 공백 발생",
+            10
+        )
+
+    # -----------------------------------------
+    # 피해자
+    # -----------------------------------------
+
+    if any(x in q for x in [
+        "피해자",
+        "피해자가"
+    ]):
+
+        if any(x in q for x in [
+            "혼자",
+            "혼자였",
+            "혼자 있었"
+        ]):
+
+            return (
+                "아니오",
+                "아니오. 사건 직전 피해자는 누군가와 연락하고 있었습니다.",
+                "피해자는 사건 직전 누군가와 연락함",
+                7
+            )
+
+        if any(x in q for x in [
+            "죽",
+            "사망",
+            "살해"
+        ]):
+
+            return (
+                "예",
+                "예. 피해자는 현장에서 사망한 상태로 발견됐습니다.",
+                "피해자는 현장에서 사망",
+                3
+            )
+
+    # -----------------------------------------
+    # 휴대전화
+    # -----------------------------------------
+
+    if any(x in q for x in [
+        "휴대폰",
+        "휴대전화",
+        "핸드폰",
+        "전화",
+        "통화"
+    ]):
+
+        if any(x in q for x in [
+            "삭제",
+            "지워",
+            "조작",
+            "없어"
+        ]):
+
+            return (
+                "예",
+                "예. 마지막 통화 기록 하나가 삭제되어 있습니다.",
+                "마지막 통화 기록 삭제",
+                10
+            )
+
+        if any(x in q for x in [
+            "박서연",
+            "서연"
+        ]):
+
+            return (
+                "예",
+                "예. 박서연은 사건 직전 피해자에게 세 차례 전화했습니다.",
+                "박서연의 사건 직전 연락",
+                7
+            )
+
+        return (
+            "예",
+            "예. 피해자의 휴대전화는 현장에서 발견됐습니다.",
+            "피해자의 휴대전화 발견",
+            3
+        )
+
+    # -----------------------------------------
+    # 김민재
+    # -----------------------------------------
+
+    if "김민재" in q or "민재" in q:
+
+        if any(x in q for x in [
+            "싸움",
+            "다툼",
+            "갈등",
+            "동기",
+            "싫어",
+            "원한"
+        ]):
+
+            return (
+                "예",
+                "예. 김민재는 사건 당일 피해자와 승진 문제로 크게 다퉜습니다.",
+                "김민재에게 범행 동기 존재",
+                8
+            )
+
+        if any(x in q for x in [
+            "cctv",
+            "현장",
+            "알리바이"
+        ]):
+
+            return (
+                "아니오",
+                "아니오. 현재까지 김민재가 현장에 있었다는 직접적인 증거는 없습니다.",
+                "김민재의 현장 증거 부족",
+                6
+            )
+
+        return (
+            "예",
+            "예. 김민재는 피해자의 직장 동료입니다.",
+            "김민재는 피해자의 직장 동료",
+            2
+        )
+
+    # -----------------------------------------
+    # 박서연
+    # -----------------------------------------
+
+    if "박서연" in q or "서연" in q:
+
+        if any(x in q for x in [
+            "전화",
+            "통화",
+            "연락"
+        ]):
+
+            return (
+                "예",
+                "예. 사건 직전 박서연이 피해자에게 세 차례 전화했습니다.",
+                "박서연이 사건 직전 세 차례 연락",
+                8
+            )
+
+        if any(x in q for x in [
+            "현장",
+            "cctv",
+            "알리바이"
+        ]):
+
+            return (
+                "아니오",
+                "아니오. 박서연이 사건 현장에 있었다는 직접 증거는 발견되지 않았습니다.",
+                "박서연의 현장 증거 부족",
+                5
+            )
+
+        return (
+            "예",
+            "예. 박서연은 피해자의 전 여자친구입니다.",
+            "박서연은 피해자의 전 여자친구",
+            2
+        )
+
+    # -----------------------------------------
+    # 최도윤
+    # -----------------------------------------
+
+    if "최도윤" in q or "도윤" in q or "관리인" in q or "이웃" in q:
+
+        if any(x in q for x in [
+            "cctv",
+            "카메라",
+            "사각",
+            "위치"
+        ]):
+
+            return (
+                "예",
+                "예. 최도윤은 건물 CCTV 위치와 사각지대를 알고 있었습니다.",
+                "최도윤은 CCTV 사각지대를 알고 있었다",
+                12
+            )
+
+        if any(x in q for x in [
+            "알리바이",
+            "집",
+            "외출",
+            "나갔"
+        ]):
+
+            return (
+                "아니오",
+                "아니오. 최도윤은 계속 집에 있었다고 주장했지만 통신 기록과 맞지 않습니다.",
+                "최도윤의 알리바이에 모순",
+                15
+            )
+
+        if any(x in q for x in [
+            "범인",
+            "죽",
+            "살해",
+            "의심"
+        ]):
+
+            return (
+                "예",
+                "예. 현재 확보된 단서 중 가장 강하게 의심되는 인물입니다.",
+                "최도윤이 가장 유력한 용의자",
+                10
+            )
+
+        return (
+            "예",
+            "예. 최도윤은 피해자의 이웃이며 건물 내부 사정을 잘 알고 있습니다.",
+            "최도윤은 피해자의 이웃",
+            3
+        )
+
+    # -----------------------------------------
+    # 지문
+    # -----------------------------------------
+
+    if any(x in q for x in [
+        "지문",
+        "손자국",
+        "손 흔적"
+    ]):
+
+        return (
+            "예",
+            "예. 피해자의 것과 다른 지문이 하나 발견됐습니다.",
+            "제3자의 지문 발견",
+            10
+        )
+
+    # -----------------------------------------
+    # 혈흔 / 상처
+    # -----------------------------------------
+
+    if any(x in q for x in [
+        "피",
+        "혈흔",
+        "상처",
+        "흉기"
+    ]):
+
+        return (
+            "예",
+            "예. 현장에는 사망과 관련된 미세한 혈흔이 발견됐습니다.",
+            "현장에서 혈흔 발견",
+            6
+        )
+
+    # -----------------------------------------
+    # 금품
+    # -----------------------------------------
+
+    if any(x in q for x in [
+        "돈",
+        "금품",
+        "지갑",
+        "도난",
+        "훔쳐",
+        "훔친"
+    ]):
+
+        return (
+            "아니오",
+            "아니오. 지갑과 귀중품은 그대로 남아 있습니다.",
+            "금품은 사라지지 않았다",
+            5
+        )
+
+    # -----------------------------------------
+    # 범인 / 살인
+    # -----------------------------------------
+
+    if any(x in q for x in [
+        "범인",
+        "살인",
+        "살해",
+        "죽였",
+        "죽인"
+    ]):
+
+        return (
+            "예",
+            "예. 현재까지의 증거를 보면 타인의 개입 가능성이 매우 높습니다.",
+            "타인의 개입 가능성 높음",
+            8
+        )
+
+    # -----------------------------------------
+    # 알리바이
+    # -----------------------------------------
+
+    if "알리바이" in q:
+
+        return (
+            "아니오",
+            "아니오. 모든 용의자의 알리바이가 완벽하게 일치하지는 않습니다.",
+            "용의자 알리바이에 모순 존재",
+            8
+        )
+
+    # -----------------------------------------
+    # 시간
+    # -----------------------------------------
+
+    if any(x in q for x in [
+        "몇 시",
+        "언제",
+        "시간",
+        "몇시"
+    ]):
+
+        return (
+            "예",
+            "예. 사건의 핵심 시간대는 23시 40분 전후입니다.",
+            "핵심 사건 시간대 23:40 전후",
+            5
+        )
+
+    # -----------------------------------------
+    # 문 / 잠금
+    # -----------------------------------------
+
+    if any(x in q for x in [
+        "잠겨",
+        "잠금",
+        "도어락",
+        "열쇠",
+        "비밀번호"
+    ]):
+
+        return (
+            "예",
+            "예. 현관문은 발견 당시 잠겨 있었습니다.",
+            "현관문 잠김",
+            5
+        )
+
+    # -----------------------------------------
+    # 힌트 요청
+    # -----------------------------------------
+
+    if any(x in q for x in [
+        "힌트",
+        "도와",
+        "모르겠",
+        "어떻게",
+        "뭘 물어"
+    ]):
+
+        return (
+            "힌트",
+            "CCTV, 휴대전화 기록, 그리고 최도윤의 알리바이를 연결해서 생각해보세요.",
+            "핵심 추리 방향: CCTV + 휴대전화 + 최도윤",
+            0
+        )
+
+    # -----------------------------------------
+    # 모르는 질문
+    # -----------------------------------------
+
+    return (
+        "불명",
+        "그 질문에 대한 확실한 정보는 아직 없습니다. 현관, CCTV, 휴대전화, 용의자의 알리바이를 조사해보세요.",
+        None,
+        0
+    )
+
+
+# =========================================================
+# HEADER
+# =========================================================
+
 st.markdown(
-    '<div style="color:#48d5ff;font-size:11px;letter-spacing:4px;font-weight:bold;">CONFIDENTIAL · 34 CASE FILES</div>',
+    '<div style="color:#45d5ff;font-size:11px;letter-spacing:4px;font-weight:800;">CONFIDENTIAL INVESTIGATION</div>',
     unsafe_allow_html=True
 )
 
 st.title("🔎 예스노 탐정")
 
-st.caption("CASE 001 · 잠긴 방의 진실")
+st.caption("CASE 001 · 잠긴 방의 진실 · 당신의 질문으로 진실을 찾아라")
 
 
-# -----------------------------
-# 상단 정보
-# -----------------------------
-c1, c2, c3, c4 = st.columns(4)
+# =========================================================
+# STATUS
+# =========================================================
 
-c1.metric("질문", f"{st.session_state.question_count}/15")
-c2.metric("수사 점수", st.session_state.score)
-c3.metric("확보 단서", len(st.session_state.clues))
-c4.metric("현재 상태", "수사 중" if not st.session_state.ending else "종료")
+a,b,c,d = st.columns(4)
 
+a.metric(
+    "질문",
+    f"{st.session_state.questions}/15"
+)
+
+b.metric(
+    "수사 점수",
+    st.session_state.score
+)
+
+c.metric(
+    "확보 단서",
+    len(st.session_state.clues)
+)
+
+d.metric(
+    "힌트 사용",
+    f"{st.session_state.hint_used}/3"
+)
 
 st.divider()
 
 
-# -----------------------------
-# 메인 화면
-# -----------------------------
-left, right = st.columns([1.55, 1])
+# =========================================================
+# MAIN
+# =========================================================
+
+left, right = st.columns([1.35, 1])
 
 
 # =========================================================
-# 왼쪽
+# LEFT
 # =========================================================
+
 with left:
 
-    st.subheader("📁 사건 기록")
+    st.subheader("📁 사건 파일")
 
     st.markdown("""
     <div class="case-photo">
-        <div class="photo-info">CASE #001 · 서울 · 23:58</div>
-        <div class="photo-title">잠긴 방의 진실</div>
+        <div class="photo-info">
+        CASE #001 · 서울 · 23:58
+        </div>
+
+        <div class="photo-title">
+        잠긴 방의 진실
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("""
-    <div class="case-card">
+    <div class="card">
 
     <b>사건 개요</b>
 
@@ -293,27 +754,30 @@ with left:
 
     새벽 1시 18분.
 
-    한 남자가 자신의 방 안에서 쓰러진 채 발견됐다.
+    피해자는 자신의 방 안에서 쓰러진 채 발견됐다.
 
     <br><br>
 
-    현관문은 잠겨 있었고 창문에서도 외부 침입 흔적은 발견되지 않았다.
+    현관문은 잠겨 있었다.
+
+    창문도 안쪽에서 잠겨 있었다.
+
+    외부 침입 흔적은 없었다.
 
     <br><br>
 
-    그런데 이상한 점이 하나 있었다.
-
-    사건 당시 방의 에어컨은 <b>18도</b>로 설정되어 있었고,
-    피해자의 휴대전화에서는 <b>마지막 통화 기록 하나가 삭제</b>되어 있었다.
+    하지만 피해자의 휴대전화에서는
+    <b>마지막 통화 기록 하나가 삭제</b>되어 있었다.
 
     <br><br>
 
-    경찰은 사고 가능성을 검토했지만,
-    현장에는 피해자 외 다른 사람의 흔적이 발견됐다.
+    복도 CCTV에는
+    <b>17초의 이상한 공백</b>이 존재한다.
 
     <br><br>
 
-    <b>당신은 15번의 질문으로 사건의 진실을 밝혀야 한다.</b>
+    당신은 예/아니오 질문을 통해
+    사건의 진실을 밝혀야 한다.
 
     </div>
     """, unsafe_allow_html=True)
@@ -322,10 +786,14 @@ with left:
 
     st.subheader("🧩 확보한 단서")
 
-    if len(st.session_state.clues) == 0:
-        st.info("아직 확보한 단서가 없습니다. 오른쪽에서 질문하세요.")
+    if not st.session_state.clues:
+
+        st.info("아직 단서가 없습니다.")
+
     else:
+
         for clue in st.session_state.clues:
+
             st.markdown(
                 f'<div class="clue">◆ {clue}</div>',
                 unsafe_allow_html=True
@@ -333,40 +801,45 @@ with left:
 
 
 # =========================================================
-# 오른쪽
+# RIGHT
 # =========================================================
+
 with right:
 
-    st.subheader("🎤 심문")
+    st.subheader("🕵️ 직접 질문하기")
 
     st.write(
-        f"현재 질문: **{st.session_state.question_count}/15**"
+        "궁금한 것을 **직접 문장으로 입력하세요.**"
     )
 
-    selected_question = st.selectbox(
-        "조사할 질문",
-        list(questions.keys()),
-        key="question_box"
+    question = st.text_input(
+        "질문",
+        placeholder="예: 현관에 들어온 흔적은 있습니까?",
+        key="player_question"
     )
 
     if st.button(
         "🔎 질문하기",
-        key="ask_button",
         use_container_width=True
     ):
 
-        if st.session_state.question_count >= 15:
+        if st.session_state.questions >= 15:
 
             st.warning("질문을 모두 사용했습니다.")
 
+        elif not question.strip():
+
+            st.warning("질문을 먼저 입력하세요.")
+
         else:
 
-            answer, detail, clue, points = questions[selected_question]
+            answer, detail, clue, points = answer_question(question)
 
-            st.session_state.question_count += 1
+            st.session_state.questions += 1
             st.session_state.score += points
 
-            if clue not in st.session_state.clues:
+            if clue and clue not in st.session_state.clues:
+
                 st.session_state.clues.append(clue)
 
             st.session_state.last_answer = (
@@ -374,88 +847,205 @@ with right:
                 detail
             )
 
+            st.session_state.history.insert(
+                0,
+                (question, answer, detail)
+            )
+
             st.rerun()
 
 
-    # 답변
+    # =====================================================
+    # ANSWER
+    # =====================================================
+
     if st.session_state.last_answer:
 
         answer, detail = st.session_state.last_answer
 
         if answer == "예":
 
-            st.markdown("""
-            <div class="answer">
-                <div class="answer-yes">YES · 예</div>
-            """, unsafe_allow_html=True)
+            st.markdown(
+                f"""
+                <div class="answer">
+                <div class="yes">YES · 예</div>
+                <div style="margin-top:6px;">{detail}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        elif answer == "아니오":
+
+            st.markdown(
+                f"""
+                <div class="answer">
+                <div class="no">NO · 아니오</div>
+                <div style="margin-top:6px;">{detail}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        elif answer == "힌트":
+
+            st.markdown(
+                f"""
+                <div class="hint">
+                <b>💡 힌트</b>
+                <br><br>
+                {detail}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
         else:
 
-            st.markdown("""
-            <div class="answer">
-                <div class="answer-no">NO · 아니오</div>
-            """, unsafe_allow_html=True)
+            st.markdown(
+                f"""
+                <div class="answer">
+                <div class="unknown">?</div>
+                <div style="margin-top:6px;">{detail}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-        st.write(detail)
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    else:
-
-        st.info("질문을 선택하고 질문하기를 누르세요.")
-
-
-    st.divider()
 
     # =====================================================
-    # 범인 지목
+    # HINT BUTTON
     # =====================================================
 
-    st.subheader("🚨 범인 지목")
+    st.write("")
 
-    st.write("모든 단서를 검토한 뒤 범인을 선택하세요.")
-
-    suspect = st.radio(
-        "누가 범인이라고 생각합니까?",
-        [
-            "김민재",
-            "박서연",
-            "최도윤"
-        ],
-        key="suspect_radio"
-    )
-
-    if suspect == "김민재":
-        st.caption("피해자의 직장 동료 · 승진 문제로 갈등")
-
-    elif suspect == "박서연":
-        st.caption("피해자의 전 여자친구 · 사건 직전 세 차례 연락")
-
-    else:
-        st.caption("피해자의 이웃 · CCTV 사각지대를 알고 있음")
-
+    st.subheader("💡 탐정 보조")
 
     if st.button(
-        "🚨 최종 범인으로 지목하기",
-        key="accuse_button",
+        "💡 힌트 받기",
         use_container_width=True
     ):
 
-        # ★★★ 진짜 범인
-        if suspect == "최도윤":
-            st.session_state.ending = "WIN"
+        if st.session_state.hint_used >= 3:
 
-        elif suspect == "김민재":
-            st.session_state.ending = "PARTIAL"
+            st.warning("힌트는 최대 3개까지 사용할 수 있습니다.")
 
         else:
-            st.session_state.ending = "LOSE"
 
-        st.rerun()
+            st.session_state.hint_used += 1
+
+            hints = [
+                "현관에 강제 침입 흔적이 없다는 것은 범인이 피해자에게 문을 열게 했다는 뜻일 수 있습니다.",
+                "CCTV의 17초 공백과 피해자의 삭제된 통화 기록을 연결해보세요.",
+                "최도윤은 CCTV 사각지대를 알고 있었고, 그의 알리바이에는 통신 기록과 맞지 않는 부분이 있습니다."
+            ]
+
+            st.session_state.last_answer = (
+                "힌트",
+                hints[st.session_state.hint_used - 1]
+            )
+
+            st.rerun()
 
 
 # =========================================================
-# 엔딩
+# SUSPECTS
+# =========================================================
+
+st.divider()
+
+st.subheader("👤 용의자")
+
+s1, s2, s3 = st.columns(3)
+
+for col, (name, data) in zip(
+    [s1, s2, s3],
+    suspects.items()
+):
+
+    with col:
+
+        st.markdown(
+            f"""
+            <div class="suspect">
+
+            <b>{name}</b>
+
+            <br>
+
+            <span style="color:#70b8d5;">
+            {data["role"]}
+            </span>
+
+            <br><br>
+
+            {data["info"]}
+
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+
+# =========================================================
+# HISTORY
+# =========================================================
+
+if st.session_state.history:
+
+    with st.expander("📋 내가 한 질문 기록 보기"):
+
+        for q, answer, detail in st.session_state.history:
+
+            st.write(f"**Q. {q}**")
+            st.write(f"**{answer}** — {detail}")
+            st.divider()
+
+
+# =========================================================
+# FINAL ACCUSATION
+# =========================================================
+
+st.divider()
+
+st.subheader("🚨 최종 범인 지목")
+
+st.write(
+    "충분히 조사했다면 범인을 직접 선택하세요."
+)
+
+suspect_choice = st.radio(
+    "범인은 누구입니까?",
+    [
+        "김민재",
+        "박서연",
+        "최도윤"
+    ],
+    horizontal=True
+)
+
+if st.button(
+    "🚨 최종 범인으로 지목하기",
+    use_container_width=True
+):
+
+    if suspect_choice == "최도윤":
+
+        st.session_state.ending = "WIN"
+
+    elif suspect_choice == "김민재":
+
+        st.session_state.ending = "PARTIAL"
+
+    else:
+
+        st.session_state.ending = "LOSE"
+
+    st.rerun()
+
+
+# =========================================================
+# ENDING
 # =========================================================
 
 if st.session_state.ending:
@@ -467,36 +1057,35 @@ if st.session_state.ending:
         st.markdown("""
         <div class="ending">
 
-        <h2>🎉 사건 해결</h2>
+        <h1>🎉 TRUE ENDING</h1>
 
-        <h3>TRUE ENDING</h3>
+        <h2>사건 해결</h2>
 
         <p>
-        당신의 추리는 정확했다.
+        당신이 지목한 <b>최도윤</b>이 진짜 범인이었다.
         </p>
 
         <p>
-        범인은 <b>최도윤</b>.
+        그는 피해자의 이웃이었고,
+        건물의 CCTV 구조를 누구보다 잘 알고 있었다.
         </p>
 
         <p>
-        그는 건물의 CCTV 사각지대를 알고 있었고,
-        피해자가 직접 문을 열어주도록 접근했다.
+        그는 CCTV 사각지대를 이용해 이동했고,
+        사건 이후 피해자의 휴대전화에서
+        마지막 통화 기록을 삭제했다.
         </p>
 
         <p>
-        사건 이후 다시 현장으로 돌아와
-        휴대전화의 마지막 통화 기록까지 삭제했다.
+        하지만 17초의 CCTV 공백,
+        삭제된 통화 기록,
+        그리고 그의 알리바이 모순이
+        모든 거짓말을 무너뜨렸다.
         </p>
 
-        <p>
-        하지만 17초의 CCTV 공백과
-        그의 알리바이 사이의 모순을 숨기지는 못했다.
-        </p>
-
-        <h3 style="color:#50d8ff;">
+        <h2 style="color:#42d5ff;">
         🔎 CASE CLOSED
-        </h3>
+        </h2>
 
         </div>
         """, unsafe_allow_html=True)
@@ -506,18 +1095,18 @@ if st.session_state.ending:
         st.markdown("""
         <div class="ending">
 
-        <h2>⚠️ 부분 해결</h2>
+        <h1>⚠️ PARTIAL ENDING</h1>
 
         <p>
-        김민재에게는 분명한 동기가 있었다.
+        김민재에게는 범행 동기가 있었다.
         </p>
 
         <p>
-        하지만 결정적인 현장 증거가 부족하다.
+        하지만 현장 증거가 부족하다.
         </p>
 
         <p>
-        당신은 범인을 너무 빨리 지목했다.
+        당신은 동기만 보고 너무 빨리 결론을 내렸다.
         </p>
 
         </div>
@@ -528,7 +1117,7 @@ if st.session_state.ending:
         st.markdown("""
         <div class="ending">
 
-        <h2>❌ 수사 실패</h2>
+        <h1>❌ BAD ENDING</h1>
 
         <p>
         잘못된 사람을 범인으로 지목했다.
@@ -543,23 +1132,15 @@ if st.session_state.ending:
 
 
 # =========================================================
-# 다시 시작
+# RESET
 # =========================================================
 
 if st.session_state.ending:
 
-    if st.button(
-        "🔄 새 사건 시작",
-        use_container_width=True
-    ):
+    if st.button("🔄 다시 수사하기", use_container_width=True):
 
-        for key in [
-            "question_count",
-            "score",
-            "clues",
-            "last_answer",
-            "ending"
-        ]:
+        for key in defaults:
+
             if key in st.session_state:
                 del st.session_state[key]
 
