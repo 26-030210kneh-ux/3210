@@ -1,205 +1,401 @@
 import os
 import hashlib
+from datetime import datetime
+
 import requests
 import streamlit as st
 
+
 # =========================================================
-# GHOST COMMIT
-# The repository remembers everything.
+# 기본 설정
 # =========================================================
 
 st.set_page_config(
     page_title="GHOST COMMIT",
     page_icon="👻",
-    layout="wide",
+    layout="wide"
 )
 
-# -----------------------------
-# STYLE
-# -----------------------------
+
+# =========================================================
+# 화면 디자인
+# =========================================================
+
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;700&display=swap');
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap');
 
 html, body, [class*="css"] {
-    font-family: "Space Grotesk", sans-serif;
+    font-family: 'JetBrains Mono', monospace;
 }
 
 .stApp {
     background:
-        radial-gradient(circle at top right, #0b2115 0%, #050807 38%),
-        #050807;
-    color: #d8f7e3;
+        radial-gradient(circle at 80% 10%, rgba(0,255,140,.07), transparent 28%),
+        #030806;
+    color: #d9ffe9;
 }
 
-h1, h2, h3, code, .mono {
-    font-family: "IBM Plex Mono", monospace;
+.block-container {
+    max-width: 1200px;
+    padding-top: 2rem;
 }
 
 .hero {
-    padding: 35px;
-    border: 1px solid #245b39;
+    border: 1px solid #1d6040;
     border-radius: 16px;
-    background: linear-gradient(135deg, #07120c, #0a1710);
-    margin-bottom: 22px;
+    padding: 30px;
+    background: linear-gradient(
+        135deg,
+        rgba(10,35,22,.96),
+        rgba(3,12,8,.98)
+    );
 }
 
-.glitch {
-    color: #8dffb2;
-    text-shadow:
-        2px 0 #174b2b,
-        -2px 0 #0c6b35;
+.hero .tag {
+    color: #54ff9b;
+    font-size: 13px;
+    font-weight: bold;
 }
 
-.card {
-    padding: 20px;
-    border: 1px solid #1d4931;
-    border-radius: 13px;
-    background: #08100c;
+.hero h1 {
+    font-size: 46px;
     margin: 8px 0;
 }
 
-.small {
-    color: #8fa99a;
-    font-size: 0.85rem;
+.hero p {
+    color: #91ad9c;
+}
+
+.tutorial {
+    border: 1px solid #286c48;
+    border-radius: 14px;
+    padding: 22px;
+    background: rgba(7,28,17,.8);
+    margin: 20px 0;
+}
+
+.step {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(100,255,170,.1);
+}
+
+.step:last-child {
+    border-bottom: none;
 }
 
 .evidence {
-    border-left: 3px solid #63ff91;
-    padding: 14px 18px;
-    background: #07100b;
-    margin: 10px 0;
-    border-radius: 5px;
-}
-
-.warning {
-    border-left: 3px solid #ffcc66;
-    padding: 14px 18px;
-    background: #151107;
-    margin: 10px 0;
-}
-
-.terminal {
-    background: #020503;
-    border: 1px solid #21492f;
+    border: 1px solid #17452f;
+    border-radius: 12px;
     padding: 18px;
-    border-radius: 10px;
-    font-family: "IBM Plex Mono", monospace;
-    color: #8dffb2;
+    background: rgba(5,18,11,.7);
+    margin-bottom: 12px;
 }
+
+.alert {
+    border-left: 4px solid #ff4747;
+    padding: 15px 18px;
+    background: rgba(80,10,10,.2);
+    border-radius: 8px;
+}
+
+.success {
+    border-left: 4px solid #45ff9b;
+    padding: 15px 18px;
+    background: rgba(10,80,45,.18);
+    border-radius: 8px;
+}
+
+.hint {
+    border-left: 4px solid #4db8ff;
+    padding: 15px 18px;
+    background: rgba(20,70,100,.15);
+    border-radius: 8px;
+}
+
+.small {
+    color: #799083;
+    font-size: 12px;
+}
+
+div[data-testid="stSidebar"] {
+    background: #07100b;
+    border-right: 1px solid #123522;
+}
+
+.stButton button {
+    border: 1px solid #1d6040;
+    background: #08170e;
+    color: #baffd5;
+}
+
+.stButton button:hover {
+    border-color: #49ff9b;
+    color: white;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
 
-# -----------------------------
-# SESSION
-# -----------------------------
-defaults = {
-    "repo": "",
-    "actions": [],
-    "opened": [],
-    "ending": None,
-}
+# =========================================================
+# 게임 상태
+# =========================================================
 
-for key, value in defaults.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
+if "tutorial_done" not in st.session_state:
+    st.session_state.tutorial_done = False
 
+if "opened" not in st.session_state:
+    st.session_state.opened = []
 
-def record(action):
-    if action not in st.session_state.actions:
-        st.session_state.actions.append(action)
+if "actions" not in st.session_state:
+    st.session_state.actions = []
 
+if "repo_data" not in st.session_state:
+    st.session_state.repo_data = None
 
-# -----------------------------
-# GITHUB API
-# -----------------------------
-API = "https://api.github.com"
-
-HEADERS = {
-    "Accept": "application/vnd.github+json"
-}
-
-token = os.getenv("GITHUB_TOKEN", "").strip()
-
-if token:
-    HEADERS["Authorization"] = f"Bearer {token}"
-
-
-@st.cache_data(ttl=45, show_spinner=False)
-def github_get(endpoint):
-
-    try:
-        response = requests.get(
-            API + endpoint,
-            headers=HEADERS,
-            timeout=12
-        )
-
-        if response.status_code == 200:
-            return response.json()
-
-        return {
-            "error": response.status_code,
-            "message": response.text[:300]
-        }
-
-    except requests.RequestException as error:
-
-        return {
-            "error": "NETWORK",
-            "message": str(error)
-        }
-
-
-def normalize_repo(value):
-
-    value = value.strip()
-
-    value = value.replace(
-        "https://github.com/",
-        ""
-    )
-
-    value = value.replace(
-        "http://github.com/",
-        ""
-    )
-
-    value = value.strip("/")
-
-    if value.endswith(".git"):
-        value = value[:-4]
-
-    if value.count("/") != 1:
-        return ""
-
-    return value
+if "ending" not in st.session_state:
+    st.session_state.ending = None
 
 
 # =========================================================
-# HEADER
+# 함수
+# =========================================================
+
+def log_action(action):
+    st.session_state.actions.append(
+        f"{datetime.now().strftime('%H:%M:%S')} // {action}"
+    )
+
+
+def open_evidence(name):
+    if name not in st.session_state.opened:
+        st.session_state.opened.append(name)
+        log_action(f"증거 확인: {name}")
+
+
+def progress():
+    return len(st.session_state.opened)
+
+
+# =========================================================
+# 사건 증거
+# =========================================================
+
+evidence = {
+
+    "기록 // README // 복구 경고": """
+README 마지막 문장
+
+"기록이 파일과 모순된다면 둘 다 믿지 마라.
+규칙을 바꾼 커밋을 찾아라."
+
+분석:
+
+누군가 단순히 파일을 삭제한 것이 아니다.
+
+프로젝트의 '복구 규칙' 자체가 바뀌었다.
+""",
+
+    "통제 // Issue #13 // 백업 경고": """
+ISSUE #13
+
+제목:
+백업은 백업이 아니다.
+
+내용:
+
+"한 사람이 백업을 통제한다면
+그것은 백업이 아니라
+단일 실패 지점이다."
+
+작성자:
+NOAH
+
+상태:
+CLOSED
+
+이슈가 닫힌 시점은
+복구 경로가 사라진 시점과 매우 가깝다.
+""",
+
+    "동기 // cleanup.diff // 소유권": """
+CLEANUP DIFF
+
+삭제된 것:
+
+- recovery/restore.py
+- recovery/manifest.json
+
+변경된 것:
+
+owner = "team"
+
+↓
+
+owner = "maintainer"
+
+결론:
+
+복구 기능이 사라졌을 뿐만 아니라
+소유권의 규칙도 바뀌었다.
+""",
+
+    "생존 // branch: still-here": """
+BRANCH: still-here
+
+숨겨진 브랜치에서 발견된 문장:
+
+"I didn't delete the project.
+I made sure nobody could restore it."
+
+번역:
+
+"나는 프로젝트를 지우지 않았다.
+아무도 복구할 수 없도록 만들었다."
+
+작성자의 이름은 남아 있지 않다.
+"""
+}
+
+
+# =========================================================
+# 용의자
+# =========================================================
+
+suspects = {
+    "MIRA": "메인테이너 — 저장소의 최종 관리자",
+    "NOAH": "아카이비스트 — 백업과 기록 담당",
+    "YOU": "조사관 — 사건을 조사하는 사람"
+}
+
+
+# =========================================================
+# 사이드바
+# =========================================================
+
+with st.sidebar:
+
+    st.markdown("## 🔐 조사 터미널")
+
+    st.caption("GHOST COMMIT // 사건번호 GC-013")
+
+    st.divider()
+
+    st.markdown("### 🎯 현재 진행도")
+
+    st.write(
+        f"증거 조사: **{len(st.session_state.opened)}/4**"
+    )
+
+    st.write(
+        f"행동 기록: **{len(st.session_state.actions)}**"
+    )
+
+    st.divider()
+
+    st.markdown("### 🕹️ 게임 순서")
+
+    st.write("① 튜토리얼 읽기")
+    st.write("② 증거 4개 조사")
+    st.write("③ 용의자 추리")
+    st.write("④ 결말 확인")
+
+    st.divider()
+
+    st.markdown("### 🔗 GitHub")
+
+    repo = st.text_input(
+        "저장소 주소",
+        placeholder="username/ghost-commit"
+    )
+
+    if st.button(
+        "⟳ GitHub 동기화",
+        use_container_width=True
+    ):
+
+        if "/" not in repo:
+
+            st.error(
+                "예: username/ghost-commit"
+            )
+
+        else:
+
+            try:
+
+                owner, name = repo.strip().split("/", 1)
+
+                headers = {}
+
+                token = os.getenv("GITHUB_TOKEN")
+
+                if token:
+                    headers["Authorization"] = (
+                        f"Bearer {token}"
+                    )
+
+                commits = requests.get(
+                    f"https://api.github.com/repos/{owner}/{name}/commits",
+                    headers=headers,
+                    timeout=8
+                ).json()
+
+                branches = requests.get(
+                    f"https://api.github.com/repos/{owner}/{name}/branches",
+                    headers=headers,
+                    timeout=8
+                ).json()
+
+                issues = requests.get(
+                    f"https://api.github.com/repos/{owner}/{name}/issues?state=all",
+                    headers=headers,
+                    timeout=8
+                ).json()
+
+                st.session_state.repo_data = {
+                    "repo": repo,
+                    "commits": commits
+                    if isinstance(commits, list)
+                    else [],
+                    "branches": branches
+                    if isinstance(branches, list)
+                    else [],
+                    "issues": issues
+                    if isinstance(issues, list)
+                    else []
+                }
+
+                log_action(
+                    f"GitHub 동기화: {repo}"
+                )
+
+                st.success("동기화 성공!")
+
+            except Exception as e:
+
+                st.error(
+                    f"GitHub 연결 실패: {e}"
+                )
+
+
+# =========================================================
+# 메인 제목
 # =========================================================
 
 st.markdown("""
 <div class="hero">
 
-<div class="small">
-CASE FILE 13 // FORENSIC REPOSITORY INVESTIGATION
+<div class="tag">
+CASE FILE // GC-013 // CLASSIFIED
 </div>
 
-<h1 class="glitch">
-👻 GHOST COMMIT
-</h1>
-
-<h3>
-The repository remembers everything.
-</h3>
+<h1>👻 GHOST COMMIT</h1>
 
 <p>
-A developer vanished.<br>
-The project didn't.<br>
-Someone rewrote the story.
+저장소는 모든 것을 기억한다.
 </p>
 
 </div>
@@ -207,600 +403,473 @@ Someone rewrote the story.
 
 
 # =========================================================
-# SIDEBAR
+# 첫 방문 튜토리얼
 # =========================================================
 
-with st.sidebar:
+if not st.session_state.tutorial_done:
 
-    st.header("ACCESS TERMINAL")
+    st.markdown("""
+    <div class="tutorial">
 
-    repo_input = st.text_input(
-        "GitHub repository",
-        value=st.session_state.repo,
-        placeholder="username/ghost-commit"
-    )
+    <h2>🎮 게임 방법</h2>
+
+    <p>
+    걱정하지 마세요. 어렵지 않습니다.
+    아래 순서대로 하면 됩니다.
+    </p>
+
+    <div class="step">
+    <b>STEP 1 — 📁 증거</b><br>
+    아래의 증거 4개를 하나씩 열어보세요.
+    </div>
+
+    <div class="step">
+    <b>STEP 2 — 🔍 단서 찾기</b><br>
+    누가 복구 경로를 없앴는지,
+    누가 저장소를 통제했는지 생각해보세요.
+    </div>
+
+    <div class="step">
+    <b>STEP 3 — 🧩 추리</b><br>
+    가장 의심되는 인물을 선택하세요.
+    </div>
+
+    <div class="step">
+    <b>STEP 4 — ☠️ 결말</b><br>
+    추리를 확정하고 결과를 확인하세요.
+    </div>
+
+    <div class="step">
+    <b>💡 초보자 팁</b><br>
+    GitHub를 연결하지 않아도
+    기본 사건은 플레이할 수 있습니다.
+    </div>
+
+    </div>
+    """, unsafe_allow_html=True)
 
     if st.button(
-        "⟳ SYNC GITHUB",
+        "🚨 사건 조사 시작",
         use_container_width=True
     ):
 
-        st.session_state.repo = repo_input.strip()
+        st.session_state.tutorial_done = True
 
-        github_get.clear()
-
-        record("GITHUB_SYNC")
+        log_action("튜토리얼 종료")
 
         st.rerun()
 
-    st.divider()
-
-    st.caption("OBJECTIVE")
-
-    st.write(
-        "Recover the truth without trusting "
-        "the story around the repository."
-    )
-
-    st.divider()
-
-    st.caption("INVESTIGATOR STATUS")
-
-    st.write(
-        f"Evidence opened: "
-        f"**{len(st.session_state.opened)}**"
-    )
-
-    st.write(
-        f"Actions recorded: "
-        f"**{len(st.session_state.actions)}**"
-    )
-
-
-repo = normalize_repo(repo_input)
-
-if repo:
-    st.session_state.repo = repo
-
 
 # =========================================================
-# LIVE DATA
+# 탭
 # =========================================================
 
-live = {
-    "commits": [],
-    "branches": [],
-    "issues": [],
-    "error": None
-}
-
-if repo:
-
-    live["commits"] = github_get(
-        f"/repos/{repo}/commits?per_page=50"
-    )
-
-    live["branches"] = github_get(
-        f"/repos/{repo}/branches?per_page=50"
-    )
-
-    live["issues"] = github_get(
-        f"/repos/{repo}/issues?state=all&per_page=50"
-    )
-
-    for key in [
-        "commits",
-        "branches",
-        "issues"
-    ]:
-
-        if isinstance(
-            live[key],
-            dict
-        ) and "error" in live[key]:
-
-            live["error"] = live[key]
-            break
-
-
-# =========================================================
-# TABS
-# =========================================================
-
-tabs = st.tabs([
-    "🗂 EVIDENCE",
-    "⌁ GITHUB",
-    "🧩 DEDUCTION",
-    "☠ ENDING"
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📁 증거 조사",
+    "⌘ GitHub",
+    "🧩 추리",
+    "☠️ 결말"
 ])
 
 
 # =========================================================
-# EVIDENCE
+# TAB 1
 # =========================================================
 
-with tabs[0]:
+with tab1:
 
-    st.subheader("Evidence Locker")
+    st.header("📁 증거 보관함")
 
-    evidence = [
+    st.write(
+        f"현재 **{progress()}/4개**의 증거를 확인했습니다."
+    )
 
-        (
-            "HISTORY",
-            "README / RECOVERY WARNING",
-            "If the history contradicts the files, "
-            "trust neither. Find the commit that "
-            "changed the rules."
-        ),
+    if progress() < 4:
 
-        (
-            "CONTROL",
-            "ISSUE #13 / BACKUP WARNING",
-            "The backup is not a backup if one person "
-            "controls it."
-        ),
+        st.markdown("""
+        <div class="hint">
+        💡 <b>힌트</b><br>
+        아래 증거를 전부 열어보세요.
+        모든 증거를 봐야 사건의 전체 그림이 보입니다.
+        </div>
+        """, unsafe_allow_html=True)
 
-        (
-            "MOTIVE",
-            "CLEANUP DIFF / OWNERSHIP",
-            "Recovery code was removed while ownership "
-            "metadata changed."
-        ),
+    st.write("")
 
-        (
-            "SURVIVAL",
-            "BRANCH: still-here",
-            "I didn't delete the project. "
-            "I made sure nobody could restore it."
-        ),
-    ]
-
-    for tag, title, text in evidence:
+    for title, content in evidence.items():
 
         with st.expander(
-            f"{tag} // {title}"
+            "› " + title
         ):
+
+            open_evidence(title)
+
+            st.code(
+                content,
+                language="text"
+            )
+
+    st.divider()
+
+    st.subheader("👤 용의자")
+
+    cols = st.columns(3)
+
+    for col, (name, role) in zip(
+        cols,
+        suspects.items()
+    ):
+
+        with col:
 
             st.markdown(
                 f"""
                 <div class="evidence">
-                {text}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
 
-            record(tag)
-
-            if tag not in st.session_state.opened:
-                st.session_state.opened.append(tag)
-
-    st.markdown("### Suspects")
-
-    columns = st.columns(3)
-
-    suspects = [
-        ("MIRA", "Maintainer"),
-        ("NOAH", "Archivist"),
-        ("YOU", "Investigator"),
-    ]
-
-    for column, (name, role) in zip(
-        columns,
-        suspects
-    ):
-
-        with column:
-
-            st.markdown(
-                f"""
-                <div class="card">
                 <h3>{name}</h3>
-                <span class="small">{role}</span>
+
+                <span class="small">
+                {role}
+                </span>
+
                 </div>
                 """,
                 unsafe_allow_html=True
             )
 
+    if progress() == 4:
 
-# =========================================================
-# GITHUB
-# =========================================================
-
-with tabs[1]:
-
-    st.subheader(
-        "Live Repository Forensics"
-    )
-
-    if not repo:
-
-        st.info(
-            "왼쪽에 GitHub 저장소를 입력하고 "
-            "SYNC GITHUB를 눌러줘."
+        st.success(
+            "✅ 모든 증거를 확인했습니다! "
+            "이제 「🧩 추리」 탭으로 이동하세요."
         )
 
-        st.markdown("""
-        <div class="terminal">
-        WAITING FOR REPOSITORY...
-        </div>
-        """, unsafe_allow_html=True)
 
-    elif live["error"]:
+# =========================================================
+# TAB 2
+# =========================================================
 
-        error = live["error"]
+with tab2:
 
-        st.error(
-            f"GitHub API error: "
-            f"{error.get('message', 'unknown')}"
+    st.header("⌘ GitHub 포렌식")
+
+    st.markdown("""
+    <div class="hint">
+
+    <b>이 메뉴는 선택사항입니다.</b><br><br>
+
+    처음 플레이하는 경우 그냥 넘어가도 됩니다.<br>
+    실제 GitHub 저장소를 연결하면
+    추가 정보를 조사할 수 있습니다.
+
+    </div>
+    """, unsafe_allow_html=True)
+
+    data = st.session_state.repo_data
+
+    if not data:
+
+        st.info(
+            "아직 GitHub 저장소를 연결하지 않았습니다."
         )
 
     else:
 
-        commits = (
-            live["commits"]
-            if isinstance(
-                live["commits"],
-                list
-            )
-            else []
+        st.subheader(
+            f"🔎 {data['repo']}"
         )
 
-        branches = (
-            live["branches"]
-            if isinstance(
-                live["branches"],
-                list
-            )
-            else []
+        commits = data["commits"]
+        branches = data["branches"]
+        issues = data["issues"]
+
+        ghost_branch = any(
+            b.get("name") == "still-here"
+            for b in branches
         )
 
-        issues_raw = (
-            live["issues"]
-            if isinstance(
-                live["issues"],
-                list
-            )
-            else []
+        issue_13 = any(
+            i.get("number") == 13
+            for i in issues
         )
 
-        issues = [
-            issue
-            for issue in issues_raw
-            if isinstance(issue, dict)
-            and "pull_request" not in issue
-        ]
+        c1, c2, c3 = st.columns(3)
 
-        branch_names = [
-            branch.get(
-                "name",
-                ""
-            )
-            for branch in branches
-        ]
+        c1.metric(
+            "커밋",
+            len(commits)
+        )
 
-        commit_messages = []
+        c2.metric(
+            "still-here",
+            "발견" if ghost_branch else "없음"
+        )
 
-        for commit in commits:
+        c3.metric(
+            "Issue #13",
+            "발견" if issue_13 else "없음"
+        )
+
+        st.divider()
+
+        st.subheader(
+            "최근 커밋"
+        )
+
+        for commit in commits[:10]:
 
             message = (
                 commit
                 .get("commit", {})
                 .get("message", "")
-                .splitlines()[0]
+                .split("\n")[0]
             )
 
-            commit_messages.append(
-                message
-            )
-
-        has_ghost_branch = any(
-            name.lower() == "still-here"
-            for name in branch_names
-        )
-
-        has_issue_13 = any(
-            issue.get("number") == 13
-            for issue in issues
-        )
-
-        expected = [
-            "initial case file",
-            "recovery warning",
-            "backup warning",
-            "remove obsolete recovery path",
-            "archive old files",
-        ]
-
-        commit_score = sum(
-            any(
-                expected_text in message.lower()
-                for message in commit_messages
-            )
-            for expected_text in expected
-        )
-
-        integrity = (
-            commit_score * 12
-            + (20 if has_ghost_branch else 0)
-            + (20 if has_issue_13 else 0)
-        )
-
-        integrity = min(
-            integrity,
-            100
-        )
-
-        col1, col2, col3 = st.columns(3)
-
-        col1.metric(
-            "CASE INTEGRITY",
-            f"{integrity}%"
-        )
-
-        col2.metric(
-            "COMMITS",
-            len(commits)
-        )
-
-        col3.metric(
-            "BRANCHES",
-            len(branches)
-        )
-
-        st.markdown(
-            "### Commit Fingerprint"
-        )
-
-        if commit_messages:
-
-            for message in commit_messages[:15]:
-
-                st.code(
-                    message,
-                    language="text"
-                )
-
-        else:
-
-            st.warning(
-                "커밋을 찾지 못했어."
-            )
-
-        st.markdown(
-            "### Branches"
-        )
-
-        for name in branch_names:
-
-            if name.lower() == "still-here":
-
-                st.write(
-                    "👻 " + name
-                )
-
-            else:
-
-                st.write(
-                    "· " + name
-                )
-
-        st.markdown(
-            "### Issues"
-        )
-
-        if issues:
-
-            for issue in issues[:10]:
-
-                st.write(
-                    f"#{issue.get('number')} "
-                    f"— {issue.get('title', '')}"
-                )
-
-        else:
+            sha = commit.get(
+                "sha",
+                ""
+            )[:7]
 
             st.write(
-                "No issues found."
+                f"`{sha}` — {message}"
             )
 
-        if (
-            has_ghost_branch
-            and has_issue_13
-        ):
-
-            st.success(
-                "HIDDEN ARTIFACTS DETECTED — "
-                "the repository is telling a second story."
-            )
-
-        record(
-            "LIVE_FORENSICS"
-        )
-
 
 # =========================================================
-# DEDUCTION
+# TAB 3
 # =========================================================
 
-with tabs[2]:
+with tab3:
 
-    st.subheader(
-        "Reconstruct the Incident"
-    )
+    st.header("🧩 추리 보드")
 
-    st.write(
-        "Choose carefully. "
-        "The second question is the real key."
-    )
-
-    suspect = st.radio(
-        "WHO BENEFITED?",
-        [
-            "MIRA — Maintainer",
-            "NOAH — Archivist",
-            "YOU — Investigator",
-        ]
-    )
-
-    mechanism = st.radio(
-        "WHAT ACTUALLY HAPPENED?",
-        [
-            "Mira destroyed recovery to seize control.",
-
-            "Noah accidentally buried the recovery path.",
-
-            "Someone used the investigator's actions "
-            "to legitimize the cover-up.",
-        ]
-    )
-
-    if st.button(
-        "SUBMIT DEDUCTION",
-        type="primary"
-    ):
-
-        record("DEDUCTION")
-
-        if (
-            suspect.startswith("YOU")
-            and mechanism.startswith("Someone")
-        ):
-
-            st.session_state.ending = "TRUE"
-
-        elif (
-            suspect.startswith("MIRA")
-            and mechanism.startswith("Mira")
-        ):
-
-            st.session_state.ending = "PARTIAL"
-
-        else:
-
-            st.session_state.ending = "BAD"
-
-        st.rerun()
-
-    st.divider()
-
-    st.markdown(
-        "### Investigation Log"
-    )
-
-    for action in st.session_state.actions:
-
-        st.write(
-            f"▸ {action}"
-        )
-
-
-# =========================================================
-# ENDING
-# =========================================================
-
-with tabs[3]:
-
-    st.subheader(
-        "Final Audit"
-    )
-
-    ending = st.session_state.ending
-
-    if ending == "TRUE":
+    if progress() < 4:
 
         st.markdown("""
-        <div class="hero">
+        <div class="alert">
 
-        <div class="small">
-        CASE CLOSED // TRUE ENDING
-        </div>
+        ⚠️ 아직 증거를 전부 확인하지 않았습니다.
 
-        <h2 class="glitch">
-        GHOST COMMIT
-        </h2>
+        <br><br>
 
-        <h3>
-        THE REPOSITORY DIDN'T LIE.
-        <br>
-        THE STORY AROUND IT DID.
-        </h3>
-
-        <p>
-        The cover-up needed an investigator.
-        </p>
-
-        <p>
-        Your investigation became the final
-        piece of evidence that made the false
-        history look legitimate.
-        </p>
-
-        <h3>
-        AUDIT SIGNATURE: YOU
-        </h3>
+        먼저 <b>「📁 증거 조사」</b>에서
+        4개의 증거를 모두 확인하세요.
 
         </div>
         """, unsafe_allow_html=True)
 
-    elif ending == "PARTIAL":
+    else:
 
-        st.warning("""
-        PARTIAL ENDING
+        st.success(
+            "증거 조사 완료! 이제 범인을 추리하세요."
+        )
 
-        You found the destruction,
-        but not who weaponized the investigation.
-        """)
+        st.markdown("""
+        <div class="hint">
 
-    elif ending == "BAD":
+        <b>🧠 핵심 질문</b><br><br>
 
-        st.error("""
-        BAD ENDING
+        단순히 누가 파일을 삭제했는지를 찾는 것이 아닙니다.<br><br>
 
-        You trusted the most convenient story.
-        """)
+        <b>
+        누가 이 사건이 정상적인 작업처럼 보이도록 만들었을까요?
+        </b>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.write("")
+
+        suspect = st.radio(
+            "① 가장 의심되는 인물은?",
+            list(suspects.keys()),
+            horizontal=True
+        )
+
+        st.write("")
+
+        reason = st.radio(
+            "② 가장 중요한 단서는?",
+            [
+                "미라가 복구 경로를 없애 저장소를 장악했다.",
+                "노아가 백업을 숨기고 기록을 조작했다.",
+                "누군가 조사관의 행동을 이용해 은폐를 정당화했다."
+            ]
+        )
+
+        st.write("")
+
+        if st.button(
+            "🔎 추리 확정",
+            use_container_width=True
+        ):
+
+            st.session_state.ending = (
+                suspect,
+                reason
+            )
+
+            log_action(
+                f"최종 추리: {suspect}"
+            )
+
+            st.success(
+                "추리가 기록되었습니다!"
+            )
+
+            st.info(
+                "이제 「☠️ 결말」 탭으로 이동하세요."
+            )
+
+
+# =========================================================
+# TAB 4
+# =========================================================
+
+with tab4:
+
+    st.header("☠️ 최종 결말")
+
+    if not st.session_state.ending:
+
+        st.markdown("""
+        <div class="hint">
+
+        아직 결말이 나오지 않았습니다.
+
+        <br><br>
+
+        <b>📁 증거 조사 → 🧩 추리 → ☠️ 결말</b>
+
+        순서대로 진행해주세요.
+
+        </div>
+        """, unsafe_allow_html=True)
 
     else:
 
-        st.info(
-            "No verdict yet."
+        suspect, reason = (
+            st.session_state.ending
         )
 
-    st.markdown(
-        "### CASE PRINCIPLE"
-    )
+        # TRUE ENDING
+        if (
+            suspect == "YOU"
+            and
+            "조사관의 행동" in reason
+        ):
 
-    st.code(
-        "GitHub isn't the platform hosting the game.\n"
-        "GitHub IS the game world.",
-        language="text"
-    )
+            st.markdown("""
+            <div class="hero">
 
-    if repo:
+            <div class="tag">
+            TRUE ENDING // GHOST COMMIT
+            </div>
+
+            <h1>
+            👻 진실을 밝혀냈다
+            </h1>
+
+            <p>
+            저장소는 거짓말하지 않았다.
+            </p>
+
+            <p>
+            거짓말을 한 것은
+            저장소 주변의 이야기였다.
+            </p>
+
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.success("""
+            누군가는 조사관의 행동을
+            증거의 일부로 만들었습니다.
+
+            그리고 마지막 흔적은
+            당신에게 연결되어 있습니다.
+            """)
+
+        # PARTIAL ENDING
+        elif suspect == "MIRA":
+
+            st.markdown("""
+            <div class="alert">
+
+            <h2>
+            ⚠️ PARTIAL ENDING
+            </h2>
+
+            <p>
+            미라가 복구 경로를 제거하고
+            저장소를 장악한 것처럼 보입니다.
+            </p>
+
+            <p>
+            하지만 아직 설명되지 않는
+            흔적이 남아 있습니다.
+            </p>
+
+            </div>
+            """, unsafe_allow_html=True)
+
+        # BAD ENDING
+        else:
+
+            st.markdown("""
+            <div class="alert">
+
+            <h2>
+            ☠️ BAD ENDING
+            </h2>
+
+            <p>
+            당신은 저장소가 보여준
+            첫 번째 이야기를 믿었습니다.
+            </p>
+
+            <p>
+            그리고 누군가는
+            그 틈을 이용했습니다.
+            </p>
+
+            </div>
+            """, unsafe_allow_html=True)
+
+        # 감사 로그
+        st.divider()
+
+        st.subheader(
+            "🧾 조사 기록"
+        )
+
+        if st.session_state.actions:
+
+            for action in st.session_state.actions:
+
+                st.code(
+                    action,
+                    language="text"
+                )
 
         fingerprint = hashlib.sha256(
-            (
-                repo
-                + "|"
-                + "|".join(
-                    st.session_state.actions
-                )
+            "|".join(
+                st.session_state.actions
             ).encode()
-        ).hexdigest()[:16].upper()
+        ).hexdigest()[:12].upper()
 
-        st.caption(
-            "SESSION FINGERPRINT // "
-            + fingerprint
+        st.write(
+            f"**SESSION FINGERPRINT:** `{fingerprint}`"
         )
 
 
 # =========================================================
-# FOOTER
+# 하단
 # =========================================================
 
 st.divider()
 
 st.caption(
-    "GHOST COMMIT // Competition Edition // "
-    "Fictional case + public GitHub metadata"
+    "GHOST COMMIT // 한국어 에디션 // "
+    "저장소는 모든 것을 기억한다."
 )
