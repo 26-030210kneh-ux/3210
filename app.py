@@ -1,138 +1,170 @@
-import os
-import hashlib
-from datetime import datetime
-
-import requests
 import streamlit as st
-
+import random
+import re
 
 # =========================================================
-# 기본 설정
+# 예스노탐정
 # =========================================================
 
 st.set_page_config(
-    page_title="GHOST COMMIT",
-    page_icon="👻",
+    page_title="예스노탐정",
+    page_icon="🕵️",
     layout="wide"
 )
 
-
 # =========================================================
-# 화면 디자인
+# CSS
 # =========================================================
 
 st.markdown("""
 <style>
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
 
 html, body, [class*="css"] {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Noto Sans KR', sans-serif;
 }
 
 .stApp {
     background:
-        radial-gradient(circle at 80% 10%, rgba(0,255,140,.07), transparent 28%),
-        #030806;
-    color: #d9ffe9;
+        radial-gradient(circle at 20% 0%, rgba(80,120,180,.12), transparent 30%),
+        radial-gradient(circle at 90% 20%, rgba(180,80,60,.08), transparent 30%),
+        #090c11;
+    color: #eeeeee;
 }
 
 .block-container {
-    max-width: 1200px;
+    max-width: 1150px;
     padding-top: 2rem;
 }
 
-.hero {
-    border: 1px solid #1d6040;
-    border-radius: 16px;
-    padding: 30px;
+.title {
+    text-align: center;
+    padding: 20px 0 10px 0;
+}
+
+.title h1 {
+    font-size: 52px;
+    font-weight: 900;
+    margin-bottom: 0;
+}
+
+.title p {
+    color: #9ba4b0;
+    font-size: 17px;
+}
+
+.case-card {
     background: linear-gradient(
-        135deg,
-        rgba(10,35,22,.96),
-        rgba(3,12,8,.98)
+        145deg,
+        rgba(25,31,40,.98),
+        rgba(13,17,23,.98)
     );
+    border: 1px solid #303945;
+    border-radius: 18px;
+    padding: 30px;
+    margin: 10px 0 20px 0;
+    box-shadow: 0 12px 40px rgba(0,0,0,.25);
 }
 
-.hero .tag {
-    color: #54ff9b;
+.case-number {
+    color: #69b7ff;
     font-size: 13px;
-    font-weight: bold;
+    font-weight: 700;
+    letter-spacing: 2px;
 }
 
-.hero h1 {
-    font-size: 46px;
+.case-title {
+    font-size: 30px;
+    font-weight: 900;
+    margin: 8px 0 20px 0;
+}
+
+.case-story {
+    color: #d8dde4;
+    line-height: 2;
+    font-size: 17px;
+    white-space: pre-line;
+}
+
+.question-box {
+    background: #111720;
+    border: 1px solid #303b49;
+    border-radius: 15px;
+    padding: 22px;
+}
+
+.answer-yes {
+    background: rgba(40,150,90,.15);
+    border: 1px solid #328d5c;
+    border-radius: 12px;
+    padding: 18px;
+    margin: 10px 0;
+}
+
+.answer-no {
+    background: rgba(190,70,70,.12);
+    border: 1px solid #9c4747;
+    border-radius: 12px;
+    padding: 18px;
+    margin: 10px 0;
+}
+
+.answer-unknown {
+    background: rgba(180,140,50,.12);
+    border: 1px solid #967b31;
+    border-radius: 12px;
+    padding: 18px;
+    margin: 10px 0;
+}
+
+.clue {
+    background: #10151c;
+    border-left: 4px solid #69b7ff;
+    padding: 14px 18px;
+    border-radius: 8px;
     margin: 8px 0;
 }
 
-.hero p {
-    color: #91ad9c;
+.final-box {
+    background: linear-gradient(
+        145deg,
+        rgba(35,65,50,.5),
+        rgba(15,25,20,.9)
+    );
+    border: 1px solid #4b936b;
+    border-radius: 18px;
+    padding: 30px;
+    text-align: center;
 }
 
-.tutorial {
-    border: 1px solid #286c48;
-    border-radius: 14px;
-    padding: 22px;
-    background: rgba(7,28,17,.8);
-    margin: 20px 0;
+.failed-box {
+    background: rgba(90,25,25,.25);
+    border: 1px solid #914747;
+    border-radius: 18px;
+    padding: 30px;
+    text-align: center;
 }
 
-.step {
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(100,255,170,.1);
-}
-
-.step:last-child {
-    border-bottom: none;
-}
-
-.evidence {
-    border: 1px solid #17452f;
-    border-radius: 12px;
-    padding: 18px;
-    background: rgba(5,18,11,.7);
-    margin-bottom: 12px;
-}
-
-.alert {
-    border-left: 4px solid #ff4747;
-    padding: 15px 18px;
-    background: rgba(80,10,10,.2);
-    border-radius: 8px;
-}
-
-.success {
-    border-left: 4px solid #45ff9b;
-    padding: 15px 18px;
-    background: rgba(10,80,45,.18);
-    border-radius: 8px;
-}
-
-.hint {
-    border-left: 4px solid #4db8ff;
-    padding: 15px 18px;
-    background: rgba(20,70,100,.15);
-    border-radius: 8px;
+.score {
+    font-size: 42px;
+    font-weight: 900;
+    text-align: center;
 }
 
 .small {
-    color: #799083;
-    font-size: 12px;
+    color: #89929e;
+    font-size: 13px;
 }
 
 div[data-testid="stSidebar"] {
-    background: #07100b;
-    border-right: 1px solid #123522;
+    background: #0c1016;
+    border-right: 1px solid #252d38;
 }
 
 .stButton button {
-    border: 1px solid #1d6040;
-    background: #08170e;
-    color: #baffd5;
-}
-
-.stButton button:hover {
-    border-color: #49ff9b;
-    color: white;
+    border-radius: 10px;
+    min-height: 45px;
 }
 
 </style>
@@ -140,135 +172,517 @@ div[data-testid="stSidebar"] {
 
 
 # =========================================================
-# 게임 상태
+# 사건 데이터
 # =========================================================
 
-if "tutorial_done" not in st.session_state:
-    st.session_state.tutorial_done = False
+CASES = [
 
-if "opened" not in st.session_state:
-    st.session_state.opened = []
+    {
+        "id": 1,
+        "title": "사라진 시계",
+        "difficulty": "⭐",
+        "story": """
+한 남자가 자신의 방에서 죽은 채 발견되었다.
 
-if "actions" not in st.session_state:
-    st.session_state.actions = []
+방문은 안에서 잠겨 있었고,
+창문도 닫혀 있었다.
 
-if "repo_data" not in st.session_state:
-    st.session_state.repo_data = None
+경찰은 처음에 자살이라고 생각했다.
 
-if "ending" not in st.session_state:
-    st.session_state.ending = None
+그런데 형사가 현장을 한 번 둘러본 뒤
+곧바로 살인이라고 판단했다.
+
+왜일까?
+""",
+        "keywords": [
+            "시계",
+            "시간",
+            "시간대",
+            "시각",
+            "죽은시간",
+            "사망시간",
+            "알리바이"
+        ],
+        "answers": {
+            "시계": "YES",
+            "시간": "YES",
+            "시간대": "YES",
+            "시각": "YES",
+            "죽은시간": "YES",
+            "사망시간": "YES",
+            "알리바이": "YES",
+            "가족": "NO",
+            "창문": "NO",
+            "문": "NO",
+            "독": "NO",
+            "총": "NO",
+            "범인": "UNKNOWN"
+        },
+        "clues": [
+            "현장에 있던 시계가 사건의 핵심이다.",
+            "사망 시각에 대한 경찰의 판단이 틀렸다.",
+            "누군가 사건 발생 시간을 조작하려 했다."
+        ],
+        "solution": """
+범인은 시계를 조작해서 사망 시간을 속였다.
+
+즉, 피해자가 죽은 시간에
+범인이 현장에 있었다는 사실을 숨기려고 한 것이다.
+
+잠긴 방 자체가 핵심이 아니라
+'언제 죽었는가'가 핵심이었다.
+"""
+    },
+
+    {
+        "id": 2,
+        "title": "잠긴 방",
+        "difficulty": "⭐⭐",
+        "story": """
+한 여성이 자신의 집에서 쓰러진 채 발견되었다.
+
+현관문은 잠겨 있었다.
+창문도 모두 닫혀 있었다.
+
+집 안에는 피해자 외에 아무도 없었다.
+
+그런데 경찰은
+외부 침입자가 있었다고 확신했다.
+
+어떻게 가능했을까?
+""",
+        "keywords": [
+            "열쇠",
+            "복제",
+            "열쇠복제",
+            "열쇠를",
+            "열쇠가",
+            "원격",
+            "밖",
+            "외부"
+        ],
+        "answers": {
+            "열쇠": "YES",
+            "복제": "YES",
+            "열쇠복제": "YES",
+            "원격": "NO",
+            "가족": "NO",
+            "창문": "NO",
+            "독": "NO",
+            "총": "NO",
+            "자살": "NO"
+        },
+        "clues": [
+            "문이 잠겨 있다는 사실만으로 외부인이 없었다고 할 수 없다.",
+            "범인은 정상적인 열쇠를 사용했을 가능성이 있다.",
+            "핵심은 '열쇠를 누가 가지고 있었는가'이다."
+        ],
+        "solution": """
+범인은 피해자의 열쇠를 미리 복제해 두었다.
+
+범행 후 문을 잠그고 떠났기 때문에
+현장에서는 침입 흔적이 발견되지 않았다.
+
+'잠긴 방'이 완벽한 밀실은 아니었던 것이다.
+"""
+    },
+
+    {
+        "id": 3,
+        "title": "멈춘 CCTV",
+        "difficulty": "⭐⭐⭐",
+        "story": """
+은행에서 현금이 사라졌다.
+
+CCTV를 확인한 경찰은
+범행 시간대의 영상을 확인했다.
+
+그런데 이상하게도
+범행이 일어난 정확한 10분 동안만
+영상이 멈춰 있었다.
+
+경찰은 내부자의 소행이라고 판단했다.
+
+왜 그랬을까?
+""",
+        "keywords": [
+            "내부자",
+            "직원",
+            "cctv",
+            "카메라",
+            "시간",
+            "전원",
+            "전기",
+            "녹화"
+        ],
+        "answers": {
+            "내부자": "YES",
+            "직원": "YES",
+            "cctv": "YES",
+            "카메라": "YES",
+            "시간": "YES",
+            "전원": "YES",
+            "전기": "YES",
+            "녹화": "YES",
+            "손님": "NO",
+            "강도": "NO",
+            "창문": "NO"
+        },
+        "clues": [
+            "CCTV는 우연히 고장난 것이 아니다.",
+            "범인은 CCTV가 멈추는 시간을 알고 있었다.",
+            "범행 시간과 CCTV 정지 시간이 정확히 일치한다."
+        ],
+        "solution": """
+범인은 은행 내부 시스템을 알고 있는 사람이었다.
+
+CCTV의 전원을 차단하거나
+녹화 시스템을 조작할 수 있는 사람만
+정확히 10분 동안 영상을 없앨 수 있었다.
+
+따라서 경찰은 내부자의 소행이라고 판단했다.
+"""
+    },
+
+    {
+        "id": 4,
+        "title": "범인이 건 전화",
+        "difficulty": "⭐⭐⭐⭐",
+        "story": """
+새벽 2시,
+경찰서에 전화가 걸려왔다.
+
+전화한 사람은 말했다.
+
+"사람을 죽였습니다."
+
+경찰이 주소를 묻자
+전화는 바로 끊겼다.
+
+경찰이 추적한 결과,
+전화는 피해자의 집에서 걸려온 것이었다.
+
+그런데 경찰이 도착했을 때
+피해자는 아직 살아 있었다.
+
+그렇다면 전화한 사람은
+누구였을까?
+""",
+        "keywords": [
+            "피해자",
+            "범인",
+            "전화",
+            "미래",
+            "녹음",
+            "자동",
+            "예약",
+            "녹음된"
+        ],
+        "answers": {
+            "피해자": "YES",
+            "범인": "NO",
+            "전화": "YES",
+            "미래": "NO",
+            "녹음": "YES",
+            "자동": "YES",
+            "예약": "YES",
+            "녹음된": "YES",
+            "가족": "NO",
+            "경찰": "NO"
+        },
+        "clues": [
+            "전화한 사람이 반드시 그 순간 직접 말한 것은 아니다.",
+            "미리 녹음된 음성을 사용할 수 있다.",
+            "전화는 자동으로 걸리도록 설정되어 있었을 가능성이 있다."
+        ],
+        "solution": """
+피해자가 미리 자신의 목소리를 녹음해 두었다.
+
+그리고 특정 시간에 자동으로 경찰에게
+전화가 걸리도록 설정했다.
+
+피해자는 자신에게 위험이 생길 것을 예상하고
+미리 신고 장치를 준비했던 것이다.
+"""
+    },
+
+    {
+        "id": 5,
+        "title": "탐정이 범인",
+        "difficulty": "⭐⭐⭐⭐⭐",
+        "story": """
+한 남자가 살해되었다.
+
+경찰은 현장을 조사했지만
+범인을 찾지 못했다.
+
+그런데 현장에 있던 탐정이 말했다.
+
+"범인은 분명히 피해자의 오른손에
+반지를 끼워 놓았을 겁니다."
+
+경찰은 즉시 탐정을 체포했다.
+
+왜일까?
+""",
+        "keywords": [
+            "오른손",
+            "반지",
+            "현장",
+            "시체",
+            "손",
+            "알고",
+            "보지",
+            "정보"
+        ],
+        "answers": {
+            "오른손": "YES",
+            "반지": "YES",
+            "현장": "YES",
+            "시체": "YES",
+            "손": "YES",
+            "알고": "YES",
+            "보지": "YES",
+            "정보": "YES",
+            "피해자": "YES",
+            "경찰": "NO"
+        },
+        "clues": [
+            "탐정은 현장에 도착한 뒤 시체를 처음 보았다.",
+            "그런데 아무도 알려주지 않은 정보를 알고 있었다.",
+            "그 정보는 범인만 알 수 있는 정보였다."
+        ],
+        "solution": """
+탐정은 범인이었다.
+
+아직 경찰에게 공개되지 않은
+시체의 손과 반지에 관한 정보를
+탐정이 알고 있었기 때문이다.
+
+탐정은 자신이 현장에서 본 것처럼 말했지만,
+사실은 범행 당시 이미 그 사실을 알고 있었다.
+"""
+    }
+]
+
+
+# =========================================================
+# 세션 상태
+# =========================================================
+
+if "started" not in st.session_state:
+    st.session_state.started = False
+
+if "case_index" not in st.session_state:
+    st.session_state.case_index = 0
+
+if "questions_left" not in st.session_state:
+    st.session_state.questions_left = 15
+
+if "question_history" not in st.session_state:
+    st.session_state.question_history = []
+
+if "clues" not in st.session_state:
+    st.session_state.clues = []
+
+if "case_finished" not in st.session_state:
+    st.session_state.case_finished = False
+
+if "case_won" not in st.session_state:
+    st.session_state.case_won = False
+
+if "score" not in st.session_state:
+    st.session_state.score = 0
+
+if "game_over" not in st.session_state:
+    st.session_state.game_over = False
+
+if "hint_used" not in st.session_state:
+    st.session_state.hint_used = False
+
+if "final_answer" not in st.session_state:
+    st.session_state.final_answer = ""
+
+
+case = CASES[st.session_state.case_index]
 
 
 # =========================================================
 # 함수
 # =========================================================
 
-def log_action(action):
-    st.session_state.actions.append(
-        f"{datetime.now().strftime('%H:%M:%S')} // {action}"
+def normalize(text):
+    text = text.lower()
+    text = re.sub(r"\s+", "", text)
+    return text
+
+
+def get_answer(question):
+
+    q = normalize(question)
+
+    for keyword, answer in case["answers"].items():
+        if normalize(keyword) in q:
+            return answer
+
+    return "UNKNOWN"
+
+
+def add_clue():
+
+    if len(st.session_state.clues) < len(case["clues"]):
+
+        clue = case["clues"][len(st.session_state.clues)]
+
+        if clue not in st.session_state.clues:
+            st.session_state.clues.append(clue)
+
+
+def reset_case():
+
+    st.session_state.questions_left = 15
+    st.session_state.question_history = []
+    st.session_state.clues = []
+    st.session_state.case_finished = False
+    st.session_state.case_won = False
+    st.session_state.hint_used = False
+    st.session_state.final_answer = ""
+
+
+def next_case():
+
+    if st.session_state.case_index < len(CASES) - 1:
+
+        st.session_state.case_index += 1
+
+        reset_case()
+
+    else:
+
+        st.session_state.game_over = True
+
+
+# =========================================================
+# 상단 제목
+# =========================================================
+
+st.markdown("""
+<div class="title">
+
+<h1>🕵️ 예스노탐정</h1>
+
+<p>
+질문은 자유롭지만, 대답은 YES 또는 NO뿐이다.
+</p>
+
+</div>
+""", unsafe_allow_html=True)
+
+
+# =========================================================
+# 게임 시작 화면
+# =========================================================
+
+if not st.session_state.started:
+
+    st.markdown("""
+    <div class="case-card">
+
+    <div class="case-number">
+    DETECTIVE SYSTEM // ONLINE
+    </div>
+
+    <div class="case-title">
+    당신은 탐정입니다.
+    </div>
+
+    <div class="case-story">
+
+    사건의 진실은 이미 존재합니다.
+
+    하지만 당신이 가진 정보는 부족합니다.
+
+    당신이 할 수 있는 것은 단 하나.
+
+    <b>질문하는 것.</b>
+
+    용의자에게 직접 질문할 수도 있고,
+    사건 자체에 대해 질문할 수도 있습니다.
+
+    하지만 대답은 오직
+
+    <b>YES / NO / 알 수 없음</b>
+
+    세 가지뿐입니다.
+
+    질문을 통해 단서를 모으고
+    마지막에 사건의 진실을 설명하세요.
+
+    </div>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.info("""
+    🎮 플레이 방법
+
+    ① 사건을 읽는다
+    ② 궁금한 것을 질문한다
+    ③ YES / NO 답변을 받는다
+    ④ 단서를 모은다
+    ⑤ 마지막에 사건의 진실을 적는다
+
+    질문은 최대 15번입니다.
+    """)
+
+    if st.button(
+        "🚨 첫 번째 사건 시작",
+        use_container_width=True
+    ):
+
+        st.session_state.started = True
+        st.rerun()
+
+    st.stop()
+
+
+# =========================================================
+# 게임 종료
+# =========================================================
+
+if st.session_state.game_over:
+
+    st.markdown("""
+    <div class="final-box">
+
+    <h1>🏆 사건 해결 완료</h1>
+
+    <h2>당신은 모든 사건을 해결했습니다.</h2>
+
+    <p>
+    이제 당신은 진짜 예스노탐정입니다.
+    </p>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(
+        f'<div class="score">{st.session_state.score} 점</div>',
+        unsafe_allow_html=True
     )
 
+    if st.button("🔄 처음부터 다시 하기"):
 
-def open_evidence(name):
-    if name not in st.session_state.opened:
-        st.session_state.opened.append(name)
-        log_action(f"증거 확인: {name}")
+        st.session_state.case_index = 0
+        st.session_state.score = 0
+        st.session_state.started = False
+        st.session_state.game_over = False
 
+        reset_case()
 
-def progress():
-    return len(st.session_state.opened)
+        st.rerun()
 
-
-# =========================================================
-# 사건 증거
-# =========================================================
-
-evidence = {
-
-    "기록 // README // 복구 경고": """
-README 마지막 문장
-
-"기록이 파일과 모순된다면 둘 다 믿지 마라.
-규칙을 바꾼 커밋을 찾아라."
-
-분석:
-
-누군가 단순히 파일을 삭제한 것이 아니다.
-
-프로젝트의 '복구 규칙' 자체가 바뀌었다.
-""",
-
-    "통제 // Issue #13 // 백업 경고": """
-ISSUE #13
-
-제목:
-백업은 백업이 아니다.
-
-내용:
-
-"한 사람이 백업을 통제한다면
-그것은 백업이 아니라
-단일 실패 지점이다."
-
-작성자:
-NOAH
-
-상태:
-CLOSED
-
-이슈가 닫힌 시점은
-복구 경로가 사라진 시점과 매우 가깝다.
-""",
-
-    "동기 // cleanup.diff // 소유권": """
-CLEANUP DIFF
-
-삭제된 것:
-
-- recovery/restore.py
-- recovery/manifest.json
-
-변경된 것:
-
-owner = "team"
-
-↓
-
-owner = "maintainer"
-
-결론:
-
-복구 기능이 사라졌을 뿐만 아니라
-소유권의 규칙도 바뀌었다.
-""",
-
-    "생존 // branch: still-here": """
-BRANCH: still-here
-
-숨겨진 브랜치에서 발견된 문장:
-
-"I didn't delete the project.
-I made sure nobody could restore it."
-
-번역:
-
-"나는 프로젝트를 지우지 않았다.
-아무도 복구할 수 없도록 만들었다."
-
-작성자의 이름은 남아 있지 않다.
-"""
-}
-
-
-# =========================================================
-# 용의자
-# =========================================================
-
-suspects = {
-    "MIRA": "메인테이너 — 저장소의 최종 관리자",
-    "NOAH": "아카이비스트 — 백업과 기록 담당",
-    "YOU": "조사관 — 사건을 조사하는 사람"
-}
+    st.stop()
 
 
 # =========================================================
@@ -277,590 +691,379 @@ suspects = {
 
 with st.sidebar:
 
-    st.markdown("## 🔐 조사 터미널")
+    st.markdown("## 🕵️ 탐정 수첩")
 
-    st.caption("GHOST COMMIT // 사건번호 GC-013")
+    st.metric(
+        "현재 사건",
+        f"{case['id']} / {len(CASES)}"
+    )
+
+    st.metric(
+        "남은 질문",
+        st.session_state.questions_left
+    )
+
+    st.metric(
+        "현재 점수",
+        st.session_state.score
+    )
 
     st.divider()
 
-    st.markdown("### 🎯 현재 진행도")
+    st.markdown("### 📌 조사 규칙")
 
-    st.write(
-        f"증거 조사: **{len(st.session_state.opened)}/4**"
-    )
-
-    st.write(
-        f"행동 기록: **{len(st.session_state.actions)}**"
-    )
+    st.write("• 질문은 최대 15번")
+    st.write("• 답변은 YES / NO")
+    st.write("• 애매한 질문은 '알 수 없음'")
+    st.write("• 마지막에 직접 추리")
 
     st.divider()
 
-    st.markdown("### 🕹️ 게임 순서")
+    if not st.session_state.hint_used:
 
-    st.write("① 튜토리얼 읽기")
-    st.write("② 증거 4개 조사")
-    st.write("③ 용의자 추리")
-    st.write("④ 결말 확인")
+        if st.button(
+            "💡 긴급 단서 +10점",
+            use_container_width=True
+        ):
 
-    st.divider()
+            st.session_state.hint_used = True
+            st.session_state.score += 10
 
-    st.markdown("### 🔗 GitHub")
+            add_clue()
 
-    repo = st.text_input(
-        "저장소 주소",
-        placeholder="username/ghost-commit"
-    )
-
-    if st.button(
-        "⟳ GitHub 동기화",
-        use_container_width=True
-    ):
-
-        if "/" not in repo:
-
-            st.error(
-                "예: username/ghost-commit"
-            )
-
-        else:
-
-            try:
-
-                owner, name = repo.strip().split("/", 1)
-
-                headers = {}
-
-                token = os.getenv("GITHUB_TOKEN")
-
-                if token:
-                    headers["Authorization"] = (
-                        f"Bearer {token}"
-                    )
-
-                commits = requests.get(
-                    f"https://api.github.com/repos/{owner}/{name}/commits",
-                    headers=headers,
-                    timeout=8
-                ).json()
-
-                branches = requests.get(
-                    f"https://api.github.com/repos/{owner}/{name}/branches",
-                    headers=headers,
-                    timeout=8
-                ).json()
-
-                issues = requests.get(
-                    f"https://api.github.com/repos/{owner}/{name}/issues?state=all",
-                    headers=headers,
-                    timeout=8
-                ).json()
-
-                st.session_state.repo_data = {
-                    "repo": repo,
-                    "commits": commits
-                    if isinstance(commits, list)
-                    else [],
-                    "branches": branches
-                    if isinstance(branches, list)
-                    else [],
-                    "issues": issues
-                    if isinstance(issues, list)
-                    else []
-                }
-
-                log_action(
-                    f"GitHub 동기화: {repo}"
-                )
-
-                st.success("동기화 성공!")
-
-            except Exception as e:
-
-                st.error(
-                    f"GitHub 연결 실패: {e}"
-                )
+            st.rerun()
 
 
 # =========================================================
-# 메인 제목
+# 사건 표시
 # =========================================================
 
-st.markdown("""
-<div class="hero">
+st.markdown(f"""
+<div class="case-card">
 
-<div class="tag">
-CASE FILE // GC-013 // CLASSIFIED
+<div class="case-number">
+CASE #{case['id']:03d} // 난이도 {case['difficulty']}
 </div>
 
-<h1>👻 GHOST COMMIT</h1>
+<div class="case-title">
+{case['title']}
+</div>
 
-<p>
-저장소는 모든 것을 기억한다.
-</p>
+<div class="case-story">
+{case['story']}
+</div>
 
 </div>
 """, unsafe_allow_html=True)
 
 
 # =========================================================
-# 첫 방문 튜토리얼
+# 이미 끝난 사건
 # =========================================================
 
-if not st.session_state.tutorial_done:
+if st.session_state.case_finished:
 
-    st.markdown("""
-    <div class="tutorial">
-
-    <h2>🎮 게임 방법</h2>
-
-    <p>
-    걱정하지 마세요. 어렵지 않습니다.
-    아래 순서대로 하면 됩니다.
-    </p>
-
-    <div class="step">
-    <b>STEP 1 — 📁 증거</b><br>
-    아래의 증거 4개를 하나씩 열어보세요.
-    </div>
-
-    <div class="step">
-    <b>STEP 2 — 🔍 단서 찾기</b><br>
-    누가 복구 경로를 없앴는지,
-    누가 저장소를 통제했는지 생각해보세요.
-    </div>
-
-    <div class="step">
-    <b>STEP 3 — 🧩 추리</b><br>
-    가장 의심되는 인물을 선택하세요.
-    </div>
-
-    <div class="step">
-    <b>STEP 4 — ☠️ 결말</b><br>
-    추리를 확정하고 결과를 확인하세요.
-    </div>
-
-    <div class="step">
-    <b>💡 초보자 팁</b><br>
-    GitHub를 연결하지 않아도
-    기본 사건은 플레이할 수 있습니다.
-    </div>
-
-    </div>
-    """, unsafe_allow_html=True)
-
-    if st.button(
-        "🚨 사건 조사 시작",
-        use_container_width=True
-    ):
-
-        st.session_state.tutorial_done = True
-
-        log_action("튜토리얼 종료")
-
-        st.rerun()
-
-
-# =========================================================
-# 탭
-# =========================================================
-
-tab1, tab2, tab3, tab4 = st.tabs([
-    "📁 증거 조사",
-    "⌘ GitHub",
-    "🧩 추리",
-    "☠️ 결말"
-])
-
-
-# =========================================================
-# TAB 1
-# =========================================================
-
-with tab1:
-
-    st.header("📁 증거 보관함")
-
-    st.write(
-        f"현재 **{progress()}/4개**의 증거를 확인했습니다."
-    )
-
-    if progress() < 4:
+    if st.session_state.case_won:
 
         st.markdown("""
-        <div class="hint">
-        💡 <b>힌트</b><br>
-        아래 증거를 전부 열어보세요.
-        모든 증거를 봐야 사건의 전체 그림이 보입니다.
+        <div class="final-box">
+
+        <h1>🟢 CASE CLOSED</h1>
+
+        <h2>사건 해결 성공!</h2>
+
+        <p>
+        당신은 사건의 핵심을 찾아냈습니다.
+        </p>
+
         </div>
         """, unsafe_allow_html=True)
 
-    st.write("")
+        st.subheader("📖 사건의 진실")
 
-    for title, content in evidence.items():
+        st.write(case["solution"])
 
-        with st.expander(
-            "› " + title
+        st.divider()
+
+        st.subheader("🏆 점수")
+
+        st.markdown(
+            f'<div class="score">+{st.session_state.score}점</div>',
+            unsafe_allow_html=True
+        )
+
+        if st.session_state.case_index < len(CASES) - 1:
+
+            if st.button(
+                "➡️ 다음 사건",
+                use_container_width=True
+            ):
+
+                next_case()
+                st.rerun()
+
+        else:
+
+            if st.button(
+                "🏆 모든 사건 클리어",
+                use_container_width=True
+            ):
+
+                st.session_state.game_over = True
+                st.rerun()
+
+    else:
+
+        st.markdown("""
+        <div class="failed-box">
+
+        <h1>🔴 CASE FAILED</h1>
+
+        <h2>사건 해결에 실패했습니다.</h2>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.subheader("📖 진짜 사건의 진실")
+
+        st.write(case["solution"])
+
+        if st.button(
+            "🔄 이 사건 다시 하기",
+            use_container_width=True
         ):
 
-            open_evidence(title)
+            reset_case()
+            st.rerun()
 
-            st.code(
-                content,
-                language="text"
-            )
+    st.stop()
+
+
+# =========================================================
+# 질문 영역
+# =========================================================
+
+st.subheader("🔎 질문하기")
+
+st.markdown("""
+<div class="question-box">
+
+<b>탐정의 질문</b>
+
+<br><br>
+
+예시:
+
+<br>
+
+• 범인은 가족입니까?<br>
+• 피해자는 혼자였습니까?<br>
+• 시계가 중요한 단서입니까?<br>
+• 범인은 남자입니까?<br>
+
+</div>
+""", unsafe_allow_html=True)
+
+st.write("")
+
+question = st.text_input(
+    "질문을 입력하세요",
+    placeholder="예: 시계가 사건과 관련 있습니까?",
+    disabled=st.session_state.questions_left <= 0
+)
+
+
+if st.button(
+    "🔍 질문하기",
+    use_container_width=True,
+    disabled=(
+        st.session_state.questions_left <= 0
+        or not question.strip()
+    )
+):
+
+    answer = get_answer(question)
+
+    st.session_state.questions_left -= 1
+
+    st.session_state.question_history.append(
+        {
+            "question": question,
+            "answer": answer
+        }
+    )
+
+    # 질문하면 점수 조금 증가
+    if answer in ["YES", "NO"]:
+
+        st.session_state.score += 5
+
+        add_clue()
+
+    st.rerun()
+
+
+# =========================================================
+# 답변 기록
+# =========================================================
+
+if st.session_state.question_history:
 
     st.divider()
 
-    st.subheader("👤 용의자")
+    st.subheader("💬 질문 기록")
 
-    cols = st.columns(3)
-
-    for col, (name, role) in zip(
-        cols,
-        suspects.items()
+    for item in reversed(
+        st.session_state.question_history
     ):
 
-        with col:
+        answer = item["answer"]
+
+        if answer == "YES":
 
             st.markdown(
                 f"""
-                <div class="evidence">
+                <div class="answer-yes">
 
-                <h3>{name}</h3>
+                <b>Q.</b> {item['question']}<br><br>
 
-                <span class="small">
-                {role}
-                </span>
+                <b>🟢 YES</b>
 
                 </div>
                 """,
                 unsafe_allow_html=True
             )
 
-    if progress() == 4:
+        elif answer == "NO":
 
-        st.success(
-            "✅ 모든 증거를 확인했습니다! "
-            "이제 「🧩 추리」 탭으로 이동하세요."
-        )
+            st.markdown(
+                f"""
+                <div class="answer-no">
 
+                <b>Q.</b> {item['question']}<br><br>
 
-# =========================================================
-# TAB 2
-# =========================================================
+                <b>🔴 NO</b>
 
-with tab2:
-
-    st.header("⌘ GitHub 포렌식")
-
-    st.markdown("""
-    <div class="hint">
-
-    <b>이 메뉴는 선택사항입니다.</b><br><br>
-
-    처음 플레이하는 경우 그냥 넘어가도 됩니다.<br>
-    실제 GitHub 저장소를 연결하면
-    추가 정보를 조사할 수 있습니다.
-
-    </div>
-    """, unsafe_allow_html=True)
-
-    data = st.session_state.repo_data
-
-    if not data:
-
-        st.info(
-            "아직 GitHub 저장소를 연결하지 않았습니다."
-        )
-
-    else:
-
-        st.subheader(
-            f"🔎 {data['repo']}"
-        )
-
-        commits = data["commits"]
-        branches = data["branches"]
-        issues = data["issues"]
-
-        ghost_branch = any(
-            b.get("name") == "still-here"
-            for b in branches
-        )
-
-        issue_13 = any(
-            i.get("number") == 13
-            for i in issues
-        )
-
-        c1, c2, c3 = st.columns(3)
-
-        c1.metric(
-            "커밋",
-            len(commits)
-        )
-
-        c2.metric(
-            "still-here",
-            "발견" if ghost_branch else "없음"
-        )
-
-        c3.metric(
-            "Issue #13",
-            "발견" if issue_13 else "없음"
-        )
-
-        st.divider()
-
-        st.subheader(
-            "최근 커밋"
-        )
-
-        for commit in commits[:10]:
-
-            message = (
-                commit
-                .get("commit", {})
-                .get("message", "")
-                .split("\n")[0]
+                </div>
+                """,
+                unsafe_allow_html=True
             )
 
-            sha = commit.get(
-                "sha",
-                ""
-            )[:7]
-
-            st.write(
-                f"`{sha}` — {message}"
-            )
-
-
-# =========================================================
-# TAB 3
-# =========================================================
-
-with tab3:
-
-    st.header("🧩 추리 보드")
-
-    if progress() < 4:
-
-        st.markdown("""
-        <div class="alert">
-
-        ⚠️ 아직 증거를 전부 확인하지 않았습니다.
-
-        <br><br>
-
-        먼저 <b>「📁 증거 조사」</b>에서
-        4개의 증거를 모두 확인하세요.
-
-        </div>
-        """, unsafe_allow_html=True)
-
-    else:
-
-        st.success(
-            "증거 조사 완료! 이제 범인을 추리하세요."
-        )
-
-        st.markdown("""
-        <div class="hint">
-
-        <b>🧠 핵심 질문</b><br><br>
-
-        단순히 누가 파일을 삭제했는지를 찾는 것이 아닙니다.<br><br>
-
-        <b>
-        누가 이 사건이 정상적인 작업처럼 보이도록 만들었을까요?
-        </b>
-
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.write("")
-
-        suspect = st.radio(
-            "① 가장 의심되는 인물은?",
-            list(suspects.keys()),
-            horizontal=True
-        )
-
-        st.write("")
-
-        reason = st.radio(
-            "② 가장 중요한 단서는?",
-            [
-                "미라가 복구 경로를 없애 저장소를 장악했다.",
-                "노아가 백업을 숨기고 기록을 조작했다.",
-                "누군가 조사관의 행동을 이용해 은폐를 정당화했다."
-            ]
-        )
-
-        st.write("")
-
-        if st.button(
-            "🔎 추리 확정",
-            use_container_width=True
-        ):
-
-            st.session_state.ending = (
-                suspect,
-                reason
-            )
-
-            log_action(
-                f"최종 추리: {suspect}"
-            )
-
-            st.success(
-                "추리가 기록되었습니다!"
-            )
-
-            st.info(
-                "이제 「☠️ 결말」 탭으로 이동하세요."
-            )
-
-
-# =========================================================
-# TAB 4
-# =========================================================
-
-with tab4:
-
-    st.header("☠️ 최종 결말")
-
-    if not st.session_state.ending:
-
-        st.markdown("""
-        <div class="hint">
-
-        아직 결말이 나오지 않았습니다.
-
-        <br><br>
-
-        <b>📁 증거 조사 → 🧩 추리 → ☠️ 결말</b>
-
-        순서대로 진행해주세요.
-
-        </div>
-        """, unsafe_allow_html=True)
-
-    else:
-
-        suspect, reason = (
-            st.session_state.ending
-        )
-
-        # TRUE ENDING
-        if (
-            suspect == "YOU"
-            and
-            "조사관의 행동" in reason
-        ):
-
-            st.markdown("""
-            <div class="hero">
-
-            <div class="tag">
-            TRUE ENDING // GHOST COMMIT
-            </div>
-
-            <h1>
-            👻 진실을 밝혀냈다
-            </h1>
-
-            <p>
-            저장소는 거짓말하지 않았다.
-            </p>
-
-            <p>
-            거짓말을 한 것은
-            저장소 주변의 이야기였다.
-            </p>
-
-            </div>
-            """, unsafe_allow_html=True)
-
-            st.success("""
-            누군가는 조사관의 행동을
-            증거의 일부로 만들었습니다.
-
-            그리고 마지막 흔적은
-            당신에게 연결되어 있습니다.
-            """)
-
-        # PARTIAL ENDING
-        elif suspect == "MIRA":
-
-            st.markdown("""
-            <div class="alert">
-
-            <h2>
-            ⚠️ PARTIAL ENDING
-            </h2>
-
-            <p>
-            미라가 복구 경로를 제거하고
-            저장소를 장악한 것처럼 보입니다.
-            </p>
-
-            <p>
-            하지만 아직 설명되지 않는
-            흔적이 남아 있습니다.
-            </p>
-
-            </div>
-            """, unsafe_allow_html=True)
-
-        # BAD ENDING
         else:
 
-            st.markdown("""
-            <div class="alert">
+            st.markdown(
+                f"""
+                <div class="answer-unknown">
 
-            <h2>
-            ☠️ BAD ENDING
-            </h2>
+                <b>Q.</b> {item['question']}<br><br>
 
-            <p>
-            당신은 저장소가 보여준
-            첫 번째 이야기를 믿었습니다.
-            </p>
+                <b>🟡 그 질문만으로는 알 수 없습니다.</b>
 
-            <p>
-            그리고 누군가는
-            그 틈을 이용했습니다.
-            </p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
+
+# =========================================================
+# 단서
+# =========================================================
+
+if st.session_state.clues:
+
+    st.divider()
+
+    st.subheader("📓 탐정 수첩 — 발견한 단서")
+
+    for clue in st.session_state.clues:
+
+        st.markdown(
+            f"""
+            <div class="clue">
+            🔎 {clue}
             </div>
-            """, unsafe_allow_html=True)
-
-        # 감사 로그
-        st.divider()
-
-        st.subheader(
-            "🧾 조사 기록"
+            """,
+            unsafe_allow_html=True
         )
 
-        if st.session_state.actions:
 
-            for action in st.session_state.actions:
+# =========================================================
+# 질문 소진
+# =========================================================
 
-                st.code(
-                    action,
-                    language="text"
-                )
+if (
+    st.session_state.questions_left <= 0
+    and not st.session_state.case_finished
+):
 
-        fingerprint = hashlib.sha256(
-            "|".join(
-                st.session_state.actions
-            ).encode()
-        ).hexdigest()[:12].upper()
+    st.warning(
+        "⚠️ 질문을 모두 사용했습니다. "
+        "이제 최종 추리를 제출하세요."
+    )
 
-        st.write(
-            f"**SESSION FINGERPRINT:** `{fingerprint}`"
+
+# =========================================================
+# 최종 추리
+# =========================================================
+
+st.divider()
+
+st.subheader("🧠 최종 추리")
+
+st.write(
+    "충분히 조사했다면 사건의 진실을 직접 설명하세요."
+)
+
+final_answer = st.text_area(
+    "당신의 추리",
+    placeholder=(
+        "예: 범인은 피해자의 시계를 조작해서 "
+        "사망 시간을 속였습니다."
+    ),
+    value=st.session_state.final_answer
+)
+
+st.session_state.final_answer = final_answer
+
+
+if st.button(
+    "🚨 최종 추리 제출",
+    use_container_width=True
+):
+
+    if len(final_answer.strip()) < 8:
+
+        st.error(
+            "조금 더 자세하게 설명해주세요."
         )
+
+    else:
+
+        answer_normalized = normalize(
+            final_answer
+        )
+
+        matched = 0
+
+        for keyword in case["keywords"]:
+
+            if normalize(keyword) in answer_normalized:
+                matched += 1
+
+        # 키워드 2개 이상이면 성공
+        if matched >= 2:
+
+            st.session_state.case_finished = True
+            st.session_state.case_won = True
+
+            st.session_state.score += 50
+
+        else:
+
+            st.session_state.case_finished = True
+            st.session_state.case_won = False
+
+        st.rerun()
 
 
 # =========================================================
@@ -870,6 +1073,5 @@ with tab4:
 st.divider()
 
 st.caption(
-    "GHOST COMMIT // 한국어 에디션 // "
-    "저장소는 모든 것을 기억한다."
+    "🕵️ 예스노탐정 — 질문으로 진실을 밝혀라."
 )
