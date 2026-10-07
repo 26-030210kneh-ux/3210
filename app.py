@@ -1,15 +1,15 @@
 import streamlit as st
-import random
 import time
+import re
 
 # =========================================================
-# YES / NO DETECTIVE
-# One-screen detective game
+# YES NO DETECTIVE
+# 최종판
 # =========================================================
 
 st.set_page_config(
     page_title="예스노 탐정",
-    page_icon="🔎",
+    page_icon="🕵️",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -23,19 +23,40 @@ st.markdown("""
 
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap');
 
-html, body, [class*="css"] {
-    font-family: 'Noto Sans KR', sans-serif !important;
+* {
+    font-family: 'Noto Sans KR', sans-serif;
 }
 
-.stApp {
+html, body {
+    margin: 0;
+    padding: 0;
+    background: #060b10;
+    color: #edf5fa;
+}
+
+body {
+    overflow: hidden;
+}
+
+[data-testid="stAppViewContainer"] {
     background:
-        radial-gradient(circle at 70% 15%, rgba(0, 120, 180, .10), transparent 35%),
-        radial-gradient(circle at 15% 80%, rgba(0, 70, 120, .08), transparent 30%),
-        #070b10;
-    color: #eaf3f8;
+        radial-gradient(circle at 80% 10%, rgba(0,150,210,.10), transparent 30%),
+        radial-gradient(circle at 10% 80%, rgba(0,90,130,.08), transparent 30%),
+        #060b10;
 }
 
-/* Streamlit 기본 요소 숨기기 */
+[data-testid="stHeader"] {
+    background: transparent;
+}
+
+.block-container {
+    max-width: 1500px;
+    padding-top: 14px !important;
+    padding-bottom: 8px !important;
+    padding-left: 28px !important;
+    padding-right: 28px !important;
+}
+
 #MainMenu {
     visibility: hidden;
 }
@@ -44,385 +65,479 @@ footer {
     visibility: hidden;
 }
 
-header {
-    background: transparent !important;
-}
-
-/* 전체 폭 */
-.block-container {
-    max-width: 1500px !important;
-    padding-top: 0.4rem !important;
-    padding-bottom: 0.2rem !important;
-}
-
-/* 스크롤 최소화 */
-section.main > div {
-    padding-bottom: 0 !important;
-}
-
 /* 제목 */
+
 .game-title {
-    font-size: 28px;
+    font-size: 34px;
     font-weight: 900;
-    letter-spacing: -1px;
-    color: #f4f8fb;
-}
-
-.top-sub {
-    color: #62cfff;
-    font-size: 11px;
-    letter-spacing: 4px;
-    font-weight: 700;
-}
-
-.case-id {
-    color: #71818c;
-    font-size: 11px;
-    letter-spacing: 2px;
-}
-
-/* 상단 상태 */
-.status-box {
-    height: 72px;
-    background: rgba(14, 23, 31, .92);
-    border: 1px solid #263743;
-    border-radius: 9px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 0 18px;
-}
-
-.status-label {
-    color: #71838f;
-    font-size: 10px;
-    letter-spacing: 2px;
+    letter-spacing: -1.5px;
+    line-height: 1;
     margin-bottom: 3px;
 }
 
-.status-value {
-    color: #edf7fc;
-    font-size: 22px;
-    font-weight: 800;
-}
-
-.status-small {
-    color: #5bcaff;
-    font-size: 10px;
-}
-
-/* 메인 패널 */
-.panel {
-    background: rgba(10, 16, 22, .95);
-    border: 1px solid #263743;
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.panel-header {
-    height: 45px;
-    border-bottom: 1px solid #24323d;
-    display: flex;
-    align-items: center;
-    padding: 0 17px;
-    background: rgba(17, 27, 35, .85);
-}
-
-.panel-title {
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 2px;
-    color: #b9d5e2;
-}
-
-.panel-code {
-    margin-left: auto;
-    color: #4f6977;
-    font-size: 9px;
-    letter-spacing: 2px;
-}
-
-/* 사건 이미지 */
-.scene {
-    height: 330px;
-    position: relative;
-    overflow: hidden;
-    background:
-        linear-gradient(
-            90deg,
-            rgba(3, 8, 13, .30),
-            rgba(3, 8, 13, .02)
-        ),
-        linear-gradient(
-            180deg,
-            rgba(0,0,0,.05),
-            rgba(0,0,0,.78)
-        ),
-        url("https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1600&q=90");
-    background-size: cover;
-    background-position: center;
-}
-
-.scene:after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-        linear-gradient(
-            90deg,
-            rgba(0,0,0,.20),
-            transparent 50%,
-            rgba(0,0,0,.35)
-        );
-    pointer-events: none;
-}
-
-.confidential {
-    position: absolute;
-    left: 18px;
-    top: 16px;
-    z-index: 2;
-    padding: 7px 13px;
-    border: 1px solid #2c6c8a;
-    background: rgba(5, 17, 25, .85);
-    color: #61cfff;
-    font-size: 9px;
-    letter-spacing: 3px;
-}
-
-.scene-label {
-    position: absolute;
-    left: 20px;
-    bottom: 18px;
-    z-index: 2;
-}
-
-.scene-title {
-    font-size: 25px;
-    font-weight: 900;
-    color: white;
-}
-
-.scene-desc {
-    margin-top: 5px;
+.game-subtitle {
+    color: #51c9ff;
     font-size: 11px;
-    color: #b7c6ce;
-}
-
-/* 사건 설명 */
-.case-story {
-    min-height: 115px;
-    padding: 17px 20px;
-    border-top: 1px solid #24323d;
-    background: #0a1117;
-}
-
-.case-tag {
-    color: #51c8ff;
-    font-size: 10px;
-    letter-spacing: 2px;
     font-weight: 800;
+    letter-spacing: 4px;
 }
 
-.case-story-title {
-    font-size: 19px;
-    font-weight: 800;
-    margin-top: 5px;
-    color: #f2f7fa;
+/* 상단 정보 */
+
+.top-box {
+    background: linear-gradient(145deg, #0d151d, #091018);
+    border: 1px solid #243745;
+    border-radius: 10px;
+    padding: 10px 16px;
+    min-height: 60px;
 }
 
-.case-story-text {
-    color: #b5c2c9;
-    font-size: 12px;
-    line-height: 1.7;
-    margin-top: 7px;
-}
-
-/* 오른쪽 질문 */
-.interrogation {
-    padding: 15px;
-}
-
-.question-count {
-    color: #61cfff;
-    font-size: 12px;
-}
-
-.progress-track {
-    width: 100%;
-    height: 4px;
-    background: #17242d;
-    border-radius: 4px;
-    margin: 8px 0 15px;
-}
-
-.progress-fill {
-    height: 4px;
-    border-radius: 4px;
-    background: #39bff5;
-}
-
-/* 용의자 카드 */
-.suspect {
-    border: 1px solid #253640;
-    background: #0b1218;
-    border-radius: 7px;
-    padding: 11px;
-    margin-bottom: 8px;
-}
-
-.suspect.active {
-    border-color: #36b9ee;
-    box-shadow: 0 0 15px rgba(35, 180, 235, .08);
-}
-
-.suspect-name {
-    font-size: 14px;
-    font-weight: 800;
-    color: #edf7fa;
-}
-
-.suspect-role {
-    color: #61747f;
+.top-label {
+    color: #7190a4;
     font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.top-number {
+    color: #f4fbff;
+    font-size: 21px;
+    font-weight: 900;
     margin-top: 2px;
 }
 
-.suspect-line {
-    color: #aebcc4;
+.top-small {
+    color: #45c9ff;
+    font-size: 9px;
+    margin-top: -3px;
+}
+
+/* 카드 */
+
+.panel {
+    background: linear-gradient(145deg, #0d151d, #091018);
+    border: 1px solid #233743;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.panel-head {
+    height: 42px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #263945;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: #dcecf4;
+}
+
+.panel-head span {
+    color: #40caff;
+}
+
+/* 사건 화면 */
+
+.scene {
+    height: 420px;
+    position: relative;
+    overflow: hidden;
+    background:
+        linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.70)),
+        linear-gradient(135deg, #1b242b 0%, #0b1117 55%, #05080b 100%);
+}
+
+/* 창문 */
+
+.window {
+    position: absolute;
+    left: 7%;
+    top: 9%;
+    width: 39%;
+    height: 47%;
+    background:
+        linear-gradient(90deg, transparent 48%, rgba(110,145,160,.28) 49%, transparent 51%),
+        linear-gradient(0deg, transparent 48%, rgba(110,145,160,.22) 49%, transparent 51%),
+        linear-gradient(135deg, #172a36, #07131c);
+    border: 5px solid #252e34;
+    box-shadow: 0 0 35px rgba(0,150,210,.10);
+}
+
+.window:after {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    background:
+        radial-gradient(circle at 20% 70%, #61a5d8 0 1px, transparent 2px),
+        radial-gradient(circle at 35% 55%, #73c2ef 0 1px, transparent 2px),
+        radial-gradient(circle at 70% 45%, #60a7dc 0 1px, transparent 2px),
+        radial-gradient(circle at 83% 73%, #70c8f5 0 1px, transparent 2px),
+        linear-gradient(180deg, #071522, #102536);
+    opacity: .75;
+}
+
+/* 침대 */
+
+.bed {
+    position: absolute;
+    left: 15%;
+    bottom: 12%;
+    width: 57%;
+    height: 25%;
+    background: linear-gradient(180deg, #6d7378, #30383d);
+    transform: skewX(-5deg);
+    border-radius: 4px;
+    box-shadow: 0 15px 30px rgba(0,0,0,.6);
+}
+
+.pillow {
+    position: absolute;
+    left: 22%;
+    bottom: 30%;
+    width: 22%;
+    height: 11%;
+    background: #aab0b3;
+    border-radius: 20px;
+    transform: rotate(-5deg);
+}
+
+.body {
+    position: absolute;
+    left: 35%;
+    bottom: 24%;
+    width: 27%;
+    height: 13%;
+    background: #555c61;
+    border-radius: 50% 45% 40% 45%;
+    transform: rotate(-7deg);
+}
+
+.head {
+    position: absolute;
+    left: 31%;
+    bottom: 28%;
+    width: 7%;
+    height: 10%;
+    background: #b88d74;
+    border-radius: 50%;
+    transform: rotate(-20deg);
+}
+
+.arm {
+    position: absolute;
+    left: 49%;
+    bottom: 20%;
+    width: 19%;
+    height: 4%;
+    background: #4b5155;
+    border-radius: 20px;
+    transform: rotate(18deg);
+}
+
+/* 문 */
+
+.door {
+    position: absolute;
+    right: 7%;
+    top: 8%;
+    width: 20%;
+    height: 75%;
+    background: linear-gradient(90deg, #3d3027, #241b17);
+    border: 6px solid #1b1613;
+    box-shadow: 0 0 25px rgba(0,0,0,.5);
+}
+
+.door-handle {
+    position: absolute;
+    right: 11%;
+    top: 51%;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #b8a46c;
+}
+
+/* 바닥 */
+
+.floor {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 17%;
+    background: repeating-linear-gradient(
+        90deg,
+        #10171c 0px,
+        #10171c 100px,
+        #172128 101px,
+        #172128 102px
+    );
+}
+
+/* 사건 라벨 */
+
+.case-label {
+    position: absolute;
+    left: 18px;
+    top: 16px;
+    padding: 7px 12px;
+    border: 1px solid #2f647d;
+    color: #62d5ff;
+    background: rgba(3,12,18,.75);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    z-index: 5;
+}
+
+.scene-tag {
+    position: absolute;
+    left: 20px;
+    bottom: 17px;
+    z-index: 5;
+    color: #fff;
     font-size: 10px;
-    line-height: 1.5;
+    background: rgba(3,7,10,.75);
+    border-left: 3px solid #38c9ff;
+    padding: 8px 12px;
+}
+
+/* 사건 설명 */
+
+.case-text {
+    padding: 14px 17px;
+    border-top: 1px solid #263945;
+    background: #091118;
+}
+
+.case-title {
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.45;
+    color: #f4f9fc;
+}
+
+.case-desc {
+    color: #9db0bb;
+    font-size: 11px;
+    line-height: 1.65;
     margin-top: 7px;
 }
 
-/* 답변 박스 */
-.answer {
-    border-left: 3px solid #35c0f5;
-    background: #0b1a24;
-    padding: 12px 14px;
-    border-radius: 4px;
-    margin-top: 10px;
+.keyword {
+    display: inline-block;
+    color: #52caff;
+    border: 1px solid #20526a;
+    border-radius: 5px;
+    padding: 2px 7px;
+    margin-right: 4px;
+    font-size: 9px;
 }
 
-.answer-label {
-    color: #51caff;
+/* 오른쪽 */
+
+.interrogation {
+    min-height: 585px;
+}
+
+/* 용의자 */
+
+.suspect-box {
+    background: #0a1118;
+    border: 1px solid #263944;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+.suspect-name {
+    font-size: 21px;
+    font-weight: 900;
+}
+
+.suspect-role {
+    color: #718895;
+    font-size: 10px;
+    margin-top: -2px;
+}
+
+.suspect-line {
+    color: #b6c6ce;
+    font-size: 11px;
+    margin-top: 7px;
+    line-height: 1.5;
+}
+
+.suspicion {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: rgba(120,130,20,.13);
+    border-left: 3px solid #9ba52c;
+    color: #d4daaa;
+    font-size: 10px;
+}
+
+/* 질문 */
+
+.question-box {
+    background: #081018;
+    border: 1px solid #29404d;
+    border-radius: 9px;
+    padding: 13px;
+    margin-top: 8px;
+}
+
+.question-label {
+    color: #4fcaff;
     font-size: 9px;
     letter-spacing: 2px;
     font-weight: 800;
 }
 
+.answer {
+    margin-top: 12px;
+    background: #0c1820;
+    border: 1px solid #263f4b;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.answer-big {
+    font-size: 24px;
+    font-weight: 900;
+    color: #ffffff;
+}
+
 .answer-text {
-    color: #e5edf1;
-    font-size: 13px;
+    color: #b9c9d1;
+    font-size: 11px;
     line-height: 1.65;
-    margin-top: 4px;
+    margin-top: 5px;
 }
 
 /* 단서 */
+
 .clue {
-    background: #111a12;
-    border: 1px solid #344c31;
-    border-radius: 6px;
-    padding: 10px;
-    margin-top: 7px;
-}
-
-.clue-title {
-    color: #9bcf73;
-    font-size: 10px;
-    font-weight: 800;
-}
-
-.clue-text {
-    color: #c2d0c0;
+    background: linear-gradient(90deg, rgba(26,84,106,.28), rgba(10,25,32,.4));
+    border: 1px solid #28536a;
+    border-radius: 7px;
+    padding: 9px 11px;
+    margin-top: 8px;
+    color: #aee8ff;
     font-size: 10px;
     line-height: 1.5;
-    margin-top: 3px;
 }
 
-/* 하단 */
-.bottom-note {
-    color: #4f636f;
-    font-size: 9px;
-    letter-spacing: 1px;
-    text-align: center;
-    padding-top: 6px;
-}
+/* Streamlit input */
 
-/* Streamlit 버튼 */
-.stButton > button {
-    width: 100% !important;
-    min-height: 42px !important;
-    border-radius: 6px !important;
-    border: 1px solid #2d5368 !important;
-    background: #102330 !important;
-    color: #d9f3ff !important;
-    font-weight: 700 !important;
-    font-size: 12px !important;
-    transition: .15s !important;
-}
-
-.stButton > button:hover {
-    border-color: #43caff !important;
-    background: #15384b !important;
-    color: white !important;
-}
-
-button[kind="primary"] {
-    background: #0879aa !important;
-    border-color: #39c7ff !important;
-    color: white !important;
-}
-
-/* 입력 */
 .stTextInput input {
-    background: #081118 !important;
-    color: #eaf7fb !important;
-    border: 1px solid #294655 !important;
-    border-radius: 6px !important;
-    min-height: 43px !important;
+    background: #071018 !important;
+    color: #f2f8fb !important;
+    border: 1px solid #2e4a59 !important;
+    border-radius: 7px !important;
+    height: 42px !important;
+    font-size: 13px !important;
 }
 
 .stTextInput input:focus {
-    border-color: #3cc8ff !important;
-    box-shadow: 0 0 0 1px #3cc8ff !important;
+    border: 1px solid #35c8ff !important;
+    box-shadow: 0 0 0 1px #35c8ff !important;
 }
 
-/* 라디오 */
-div[role="radiogroup"] {
-    gap: 5px !important;
+/* select */
+
+.stSelectbox div[data-baseweb="select"] > div {
+    background: #071018 !important;
+    border-color: #2e4a59 !important;
+    color: white !important;
+    min-height: 42px !important;
 }
 
-div[role="radiogroup"] label {
-    background: #0c161d !important;
-    border: 1px solid #263d4a !important;
-    border-radius: 5px !important;
-    padding: 8px 12px !important;
+/* 버튼 */
+
+.stButton > button {
+    width: 100%;
+    min-height: 40px;
+    background: #0d2634 !important;
+    color: #eaf9ff !important;
+    border: 1px solid #31647b !important;
+    border-radius: 7px !important;
+    font-weight: 800 !important;
+    font-size: 11px !important;
 }
 
-/* 탭 */
-button[data-baseweb="tab"] {
-    color: #718894 !important;
+.stButton > button:hover {
+    background: #12394b !important;
+    border-color: #43ccff !important;
+    color: white !important;
 }
 
-button[data-baseweb="tab"][aria-selected="true"] {
-    color: #5ecbff !important;
+/* 주요 버튼 */
+
+.primary-button button {
+    background: #168fc1 !important;
+    border: 1px solid #53d7ff !important;
+    color: white !important;
+}
+
+/* 진행바 */
+
+.progress-track {
+    width: 100%;
+    height: 5px;
+    background: #16242c;
+    border-radius: 5px;
+    overflow: hidden;
+    margin: 8px 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #19a9df, #6ae2ff);
 }
 
 /* 알림 */
-div[data-testid="stAlert"] {
-    background: #0b1720 !important;
-    border: 1px solid #254554 !important;
+
+.notice {
+    background: #0b1a25;
+    border: 1px solid #23485d;
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #bcd2dc;
+    font-size: 10px;
+    line-height: 1.6;
+}
+
+.success {
+    border-color: #2c8064;
+    background: #0b211b;
+    color: #a9f0d5;
+}
+
+.danger {
+    border-color: #824b4b;
+    background: #210f12;
+    color: #f2b7bd;
 }
 
 /* 모바일 */
-@media(max-width: 900px) {
-    .scene {
-        height: 260px;
+
+@media (max-width: 900px) {
+
+    body {
+        overflow: auto;
+    }
+
+    .block-container {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
     }
 
     .game-title {
-        font-size: 23px;
+        font-size: 26px;
+    }
+
+    .scene {
+        height: 330px;
     }
 }
 
@@ -431,209 +546,108 @@ div[data-testid="stAlert"] {
 
 
 # =========================================================
-# DATA
+# GAME DATA
 # =========================================================
+
+CASE = {
+    "title": "잠긴 방의 진실",
+    "number": "001",
+    "round": "01 / 03",
+    "time": "23:58",
+    "location": "서울 마포구 / 아파트 1204호",
+    "victim": "김도윤",
+    "summary": (
+        "밤 11시 58분, 김도윤이 자신의 방에서 쓰러진 채 발견됐다. "
+        "현관은 잠겨 있었고 외부인의 침입 흔적도 없다."
+    ),
+    "story": (
+        "경찰은 처음에 단순한 사고라고 판단했다. "
+        "하지만 현장에는 이상한 점이 몇 가지 있었다. "
+        "피해자의 휴대폰에는 마지막 통화 기록이 삭제되어 있었고, "
+        "CCTV에는 사건 직전 누군가가 복도를 지나간 흔적이 남아 있었다."
+    )
+}
 
 SUSPECTS = {
     "김민재": {
         "role": "피해자의 직장 동료",
-        "description": "사건 당일 피해자와 마지막으로 통화한 사람.",
-        "secret": "승진 문제로 피해자와 크게 다퉜다.",
+        "line": "사건 당일 피해자와 마지막으로 통화한 사람.",
+        "suspicion": "승진 문제로 피해자와 크게 다툰 적이 있다.",
+        "truth": {
+            "cctv": (True, "CCTV에 찍힌 사람은 나다. 하지만 피해자를 만나러 간 건 아니다."),
+            "현관": (False, "나는 현관으로 들어가지 않았다."),
+            "전화": (True, "그날 밤 피해자와 통화했다."),
+            "마지막": (True, "내가 마지막 통화 상대인 건 맞다."),
+            "다툼": (True, "회사에서 피해자와 말다툼을 했다."),
+            "집": (False, "그날 피해자의 집에 들어간 적은 없다."),
+            "방": (False, "피해자의 방에 들어간 적은 없다."),
+            "열쇠": (False, "피해자의 집 열쇠는 가지고 있지 않다."),
+            "문": (False, "현관문을 직접 연 적은 없다."),
+            "시간": (True, "23시 40분쯤 회사에서 나왔다."),
+            "알리바이": (True, "택시 기록이 남아 있다."),
+            "휴대폰": (True, "통화가 끝난 뒤 바로 전화를 끊었다."),
+        }
     },
+
     "박서연": {
         "role": "피해자의 전 여자친구",
-        "description": "헤어진 뒤에도 피해자와 연락을 이어갔다.",
-        "secret": "사건 당일 밤 피해자에게 세 번 전화했다.",
-    },
-    "최도윤": {
-        "role": "건물 관리인",
-        "description": "사건 현장의 출입기록과 CCTV를 관리한다.",
-        "secret": "CCTV 일부가 23:40부터 18분간 저장되지 않았다.",
-    },
-    "한유진": {
-        "role": "피해자의 동생",
-        "description": "피해자와 가장 가까운 가족.",
-        "secret": "사건 전날 피해자와 돈 문제로 다퉜다.",
-    },
-}
-
-
-# 질문에 대한 YES / NO 데이터
-QUESTIONS = {
-
-    "현관문": {
-        "answer": "아니오",
-        "text": "현관문에는 강제로 들어온 흔적이 없습니다.",
-        "clue": "범인은 피해자가 직접 문을 열어줬을 가능성이 있습니다.",
-        "points": 5,
+        "line": "헤어진 뒤에도 피해자와 연락을 이어가고 있었다.",
+        "suspicion": "사건 일주일 전 피해자에게 다시 만나자고 요구했다.",
+        "truth": {
+            "cctv": (False, "CCTV에 찍힌 사람은 내가 아니다."),
+            "현관": (False, "현관 안으로 들어간 적이 없다."),
+            "전화": (True, "그날 피해자에게 세 번 전화했다."),
+            "마지막": (False, "마지막 통화 상대는 내가 아니다."),
+            "다툼": (True, "며칠 전 피해자와 크게 다퉜다."),
+            "집": (True, "그날 오후에는 피해자의 집에 있었다."),
+            "방": (True, "피해자의 방에 들어간 적은 있다."),
+            "열쇠": (True, "예전에 받은 비상용 열쇠가 하나 있었다."),
+            "문": (True, "예전에는 그 열쇠로 문을 열어본 적이 있다."),
+            "시간": (False, "23시 이후에는 집에 있었다."),
+            "알리바이": (True, "친구와 영상통화를 하고 있었다."),
+            "휴대폰": (False, "통화 기록을 삭제하지 않았다."),
+        }
     },
 
-    "문": {
-        "answer": "아니오",
-        "text": "현관문에는 강제로 들어온 흔적이 없습니다.",
-        "clue": "외부 침입 가능성이 낮습니다.",
-        "points": 5,
+    "최도현": {
+        "role": "아파트 관리 직원",
+        "line": "사건 당시 복도 CCTV를 관리하고 있었다.",
+        "suspicion": "CCTV 기록 일부가 사건 직후 수정됐다.",
+        "truth": {
+            "cctv": (True, "CCTV 시스템을 관리할 수 있는 권한은 있다."),
+            "현관": (True, "복도에 들어간 것은 맞다."),
+            "전화": (False, "피해자와 직접 통화하지 않았다."),
+            "마지막": (False, "마지막 통화 상대는 아니다."),
+            "다툼": (False, "피해자와 다툰 적은 없다."),
+            "집": (True, "사건 전에 점검 때문에 방문한 적이 있다."),
+            "방": (False, "피해자의 방에는 들어가지 않았다."),
+            "열쇠": (True, "관리용 마스터키를 가지고 있다."),
+            "문": (True, "관리용 열쇠로 현관을 열 수 있다."),
+            "시간": (True, "23시 45분쯤 복도 CCTV를 확인했다."),
+            "알리바이": (False, "확실한 목격자는 없다."),
+            "휴대폰": (False, "피해자의 휴대폰에는 손대지 않았다."),
+        }
     },
 
-    "cctv": {
-        "answer": "예",
-        "text": "CCTV는 사건 당일 밤 11시 40분부터 약 18분간 기록이 비어 있습니다.",
-        "clue": "누군가 CCTV의 공백을 이용했을 가능성이 있습니다.",
-        "points": 10,
-    },
-
-    "카메라": {
-        "answer": "예",
-        "text": "CCTV 기록에는 이상한 공백이 존재합니다.",
-        "clue": "사건 시간대에 기록이 사라졌습니다.",
-        "points": 10,
-    },
-
-    "전화": {
-        "answer": "예",
-        "text": "피해자는 사망 직전 누군가에게 전화를 걸었습니다.",
-        "clue": "마지막 통화가 사건의 핵심 단서입니다.",
-        "points": 8,
-    },
-
-    "통화": {
-        "answer": "예",
-        "text": "사건 직전 피해자의 휴대전화에서 마지막 통화 기록이 발견되었습니다.",
-        "clue": "마지막 통화 상대를 확인해야 합니다.",
-        "points": 8,
-    },
-
-    "지문": {
-        "answer": "예",
-        "text": "현장에는 용의자 중 한 명의 지문이 발견되었습니다.",
-        "clue": "지문은 사건 당일 이전에 남겨졌을 수도 있습니다.",
-        "points": 7,
-    },
-
-    "혈흔": {
-        "answer": "아니오",
-        "text": "현장에서 대량의 혈흔은 발견되지 않았습니다.",
-        "clue": "사망 원인은 일반적인 흉기 사건과 다릅니다.",
-        "points": 6,
-    },
-
-    "무기": {
-        "answer": "아니오",
-        "text": "현장에서는 명확한 살해 도구가 발견되지 않았습니다.",
-        "clue": "범행 도구가 현장에서 제거됐을 가능성이 있습니다.",
-        "points": 7,
-    },
-
-    "술": {
-        "answer": "예",
-        "text": "피해자의 혈액에서 소량의 알코올 성분이 확인됐습니다.",
-        "clue": "누군가와 술을 마시고 있었을 가능성이 있습니다.",
-        "points": 4,
-    },
-
-    "싸움": {
-        "answer": "예",
-        "text": "피해자는 사건 전날 누군가와 심하게 다툰 기록이 있습니다.",
-        "clue": "피해자의 주변 관계를 조사해야 합니다.",
-        "points": 5,
-    },
-
-    "돈": {
-        "answer": "예",
-        "text": "피해자는 최근 큰 금액의 돈을 누군가에게 요구받았습니다.",
-        "clue": "금전 문제가 범행 동기일 수 있습니다.",
-        "points": 8,
-    },
-
-    "열쇠": {
-        "answer": "예",
-        "text": "현관 열쇠는 피해자의 집 안에서 발견되었습니다.",
-        "clue": "범인이 열쇠를 가지고 들어온 것이 아닐 가능성이 큽니다.",
-        "points": 8,
-    },
-
-    "창문": {
-        "answer": "아니오",
-        "text": "창문에는 외부에서 침입한 흔적이 없습니다.",
-        "clue": "창문을 통한 침입은 배제됩니다.",
-        "points": 5,
-    },
-
-    "도망": {
-        "answer": "예",
-        "text": "사건 이후 한 명의 용의자가 평소보다 빠르게 현장을 떠났습니다.",
-        "clue": "이동 기록을 비교해야 합니다.",
-        "points": 8,
-    },
-
-    "거짓말": {
-        "answer": "예",
-        "text": "현재까지 확보된 진술 중 최소 한 개는 사실과 일치하지 않습니다.",
-        "clue": "진술의 시간대를 비교하십시오.",
-        "points": 12,
-    },
-
-    "범인": {
-        "answer": "아니오",
-        "text": "그 질문에는 직접 답할 수 없습니다. 직접 단서를 조합해야 합니다.",
-        "clue": "질문보다 모순을 찾는 것이 중요합니다.",
-        "points": 1,
-    },
-
-    "살해": {
-        "answer": "예",
-        "text": "경찰은 이 사건을 타살 가능성이 높은 사건으로 보고 있습니다.",
-        "clue": "단순 사고가 아닐 가능성이 높습니다.",
-        "points": 5,
-    },
-
-    "혼자": {
-        "answer": "아니오",
-        "text": "피해자가 사건 직전 혼자 있었다고 단정할 수 없습니다.",
-        "clue": "다른 사람이 현장에 있었을 가능성이 있습니다.",
-        "points": 5,
-    },
-}
-
-
-# 용의자별 특수 질문
-SUSPECT_ANSWERS = {
-
-    "김민재": {
-        "cctv": ("아니오", "나는 CCTV를 관리하지 않습니다."),
-        "전화": ("예", "마지막 통화는 내가 맞습니다. 하지만 1분도 안 되는 짧은 통화였습니다."),
-        "싸움": ("예", "승진 문제로 다툰 건 맞지만 그게 살인 이유는 아닙니다."),
-        "돈": ("아니오", "피해자에게 돈을 빌린 적은 없습니다."),
-        "현관": ("아니오", "나는 그날 집에 들어간 적이 없습니다."),
-        "도망": ("예", "회사에 급한 일이 있어서 먼저 떠났습니다."),
-    },
-
-    "박서연": {
-        "cctv": ("아니오", "CCTV가 끊겼다는 건 지금 처음 들었습니다."),
-        "전화": ("예", "전화한 건 맞지만 받지 않았습니다."),
-        "싸움": ("예", "헤어진 뒤에도 서로 감정이 남아 있었습니다."),
-        "돈": ("아니오", "돈 때문에 싸운 적은 없습니다."),
-        "현관": ("아니오", "그날 그 집에 가지 않았습니다."),
-        "도망": ("아니오", "나는 현장을 떠난 적이 없습니다."),
-    },
-
-    "최도윤": {
-        "cctv": ("예", "CCTV에 문제가 있었던 건 사실입니다."),
-        "전화": ("아니오", "피해자와 직접 통화한 적은 없습니다."),
-        "싸움": ("아니오", "나는 피해자와 개인적인 관계가 없습니다."),
-        "돈": ("아니오", "돈 문제도 없습니다."),
-        "현관": ("예", "관리인이라 건물에 들어갈 수 있습니다."),
-        "도망": ("아니오", "나는 근무를 마치고 정상적으로 퇴근했습니다."),
-    },
-
-    "한유진": {
-        "cctv": ("아니오", "나는 CCTV에 접근할 수 없습니다."),
-        "전화": ("예", "사건 전에 형에게 전화했습니다."),
-        "싸움": ("예", "돈 문제 때문에 말다툼했습니다."),
-        "돈": ("예", "형에게 돈을 빌려달라고 했습니다."),
-        "현관": ("예", "가족이라 비밀번호를 알고 있습니다."),
-        "도망": ("아니오", "나는 현장에 가지 않았습니다."),
-    },
+    "한지우": {
+        "role": "피해자의 이웃",
+        "line": "사건 당일 밤 이상한 소리를 들었다고 주장한다.",
+        "suspicion": "경찰에게 처음 말한 내용과 실제 기록이 다르다.",
+        "truth": {
+            "cctv": (False, "CCTV에 찍힌 사람은 내가 아니다."),
+            "현관": (False, "피해자의 집에는 들어가지 않았다."),
+            "전화": (False, "피해자에게 전화하지 않았다."),
+            "마지막": (False, "마지막 통화 상대가 아니다."),
+            "다툼": (False, "피해자와 다툰 적이 없다."),
+            "집": (False, "피해자의 집에 방문한 적이 없다."),
+            "방": (False, "방에 들어간 적이 없다."),
+            "열쇠": (False, "열쇠가 없다."),
+            "문": (False, "문을 열지 않았다."),
+            "시간": (True, "23시 50분에 복도에서 소리를 들었다."),
+            "알리바이": (True, "집에서 TV를 보고 있었다."),
+            "휴대폰": (False, "휴대폰에는 손대지 않았다."),
+        }
+    }
 }
 
 
@@ -641,14 +655,14 @@ SUSPECT_ANSWERS = {
 # SESSION
 # =========================================================
 
-if "started" not in st.session_state:
-    st.session_state.started = True
-
 if "questions" not in st.session_state:
     st.session_state.questions = 0
 
 if "score" not in st.session_state:
     st.session_state.score = 0
+
+if "trust" not in st.session_state:
+    st.session_state.trust = 100
 
 if "clues" not in st.session_state:
     st.session_state.clues = []
@@ -656,627 +670,570 @@ if "clues" not in st.session_state:
 if "history" not in st.session_state:
     st.session_state.history = []
 
-if "current_suspect" not in st.session_state:
-    st.session_state.current_suspect = "김민재"
-
 if "last_answer" not in st.session_state:
     st.session_state.last_answer = None
 
-if "last_question" not in st.session_state:
-    st.session_state.last_question = ""
-
-if "game_finished" not in st.session_state:
-    st.session_state.game_finished = False
+if "game_over" not in st.session_state:
+    st.session_state.game_over = False
 
 
 # =========================================================
-# TOP BAR
+# QUESTION ENGINE
 # =========================================================
 
-top1, top2, top3 = st.columns([4, 1, 1])
+def classify_question(q):
+    q = q.lower().replace(" ", "")
 
-with top1:
+    keywords = {
+        "cctv": ["cctv", "카메라", "영상", "찍혔", "녹화"],
+        "현관": ["현관", "들어", "침입", "집에왔", "방문"],
+        "전화": ["전화", "통화", "연락", "전화했"],
+        "마지막": ["마지막", "최후", "마지막으로"],
+        "다툼": ["싸움", "다툼", "싸웠", "갈등", "말다툼"],
+        "집": ["집", "아파트", "1204"],
+        "방": ["방", "침실", "피해자방"],
+        "열쇠": ["열쇠", "키", "마스터키"],
+        "문": ["문", "문을"],
+        "시간": ["몇시", "시간", "언제", "시각", "밤"],
+        "알리바이": ["알리바이", "증명", "어디있", "목격"],
+        "휴대폰": ["휴대폰", "핸드폰", "폰", "스마트폰"],
+    }
+
+    for key, words in keywords.items():
+        for word in words:
+            if word in q:
+                return key
+
+    return None
+
+
+def ask_question(suspect, question):
+
+    key = classify_question(question)
+
+    if key is None:
+        return (
+            "알 수 없음",
+            "그 질문에는 명확한 예/아니오 답변을 할 수 없습니다. "
+            "CCTV, 현관, 전화, 시간, 알리바이처럼 구체적으로 물어보세요.",
+            False,
+            None
+        )
+
+    yes, answer = SUSPECTS[suspect]["truth"].get(
+        key,
+        (False, "그 질문에 대해서는 할 말이 없다.")
+    )
+
+    return (
+        "예" if yes else "아니오",
+        answer,
+        True,
+        key
+    )
+
+
+# =========================================================
+# HEADER
+# =========================================================
+
+head1, head2 = st.columns([2.8, 1.2])
+
+with head1:
     st.markdown("""
-    <div class="top-sub">CONFIDENTIAL • 34 CASE FILES</div>
+    <div class="game-subtitle">CONFIDENTIAL · 34 CASE FILES</div>
     <div class="game-title">예스노 탐정</div>
     """, unsafe_allow_html=True)
 
-with top2:
+with head2:
     st.markdown("""
-    <div class="status-box">
-        <div class="status-label">CASE</div>
-        <div class="status-value">001</div>
-        <div class="status-small">잠긴 방의 진실</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with top3:
-    st.markdown("""
-    <div class="status-box">
-        <div class="status-label">ROUND</div>
-        <div class="status-value">01 / 03</div>
-        <div class="status-small">INVESTIGATION</div>
+    <div style="text-align:right; padding-top:7px; color:#617783; font-size:9px; letter-spacing:2px;">
+    INVESTIGATION SYSTEM<br>
+    <span style="color:#43caff; font-size:11px;">ONLINE</span>
     </div>
     """, unsafe_allow_html=True)
 
 
-st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-
-
 # =========================================================
-# SCORE BAR
+# TOP STATS
 # =========================================================
 
-s1, s2, s3, s4 = st.columns(4)
+a, b, c, d = st.columns(4)
 
-with s1:
+with a:
     st.markdown(f"""
-    <div class="status-box">
-        <div class="status-label">질문</div>
-        <div class="status-value">{st.session_state.questions}/15</div>
+    <div class="top-box">
+        <div class="top-label">질문</div>
+        <div class="top-number">{st.session_state.questions}/15</div>
+        <div class="top-small">QUESTION COUNT</div>
     </div>
     """, unsafe_allow_html=True)
 
-with s2:
+with b:
     st.markdown(f"""
-    <div class="status-box">
-        <div class="status-label">수사 점수</div>
-        <div class="status-value">{st.session_state.score}</div>
+    <div class="top-box">
+        <div class="top-label">수사 점수</div>
+        <div class="top-number">{st.session_state.score}</div>
+        <div class="top-small">INVESTIGATION SCORE</div>
     </div>
     """, unsafe_allow_html=True)
 
-with s3:
-    trust = max(0, 100 - max(0, st.session_state.questions - 10) * 5)
+with c:
     st.markdown(f"""
-    <div class="status-box">
-        <div class="status-label">신뢰도</div>
-        <div class="status-value">{trust}%</div>
+    <div class="top-box">
+        <div class="top-label">신뢰도</div>
+        <div class="top-number">{st.session_state.trust}%</div>
+        <div class="top-small">DETECTIVE TRUST</div>
     </div>
     """, unsafe_allow_html=True)
 
-with s4:
+with d:
     st.markdown(f"""
-    <div class="status-box">
-        <div class="status-label">확보 단서</div>
-        <div class="status-value">{len(st.session_state.clues)}</div>
+    <div class="top-box">
+        <div class="top-label">확보 단서</div>
+        <div class="top-number">{len(st.session_state.clues)}</div>
+        <div class="top-small">CLUES FOUND</div>
     </div>
     """, unsafe_allow_html=True)
 
 
-st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+st.write("")
 
 
 # =========================================================
-# MAIN SCREEN
+# MAIN LAYOUT
 # =========================================================
 
-left, right = st.columns([1.55, 1], gap="small")
+left, right = st.columns([1.55, 1], gap="medium")
 
 
 # =========================================================
-# LEFT — CASE
+# LEFT - CASE
 # =========================================================
 
 with left:
 
     st.markdown("""
     <div class="panel">
-        <div class="panel-header">
-            <div class="panel-title">CASE FILE // 현장 기록</div>
-            <div class="panel-code">CONFIDENTIAL • CASE 001</div>
+        <div class="panel-head">
+            CASE FILE <span>//</span> 현장 기록
+            <span style="float:right; font-size:8px;">CONFIDENTIAL · CASE 001</span>
         </div>
 
         <div class="scene">
 
-            <div class="confidential">
-                CASE #001 • EVIDENCE PHOTO
+            <div class="case-label">
+                CASE #001 · EVIDENCE PHOTO
             </div>
 
-            <div class="scene-label">
-                <div class="scene-title">잠긴 방의 진실</div>
-                <div class="scene-desc">
-                    서울 • 23:58 • 외부 침입 흔적 없음
-                </div>
+            <div class="window"></div>
+
+            <div class="door">
+                <div class="door-handle"></div>
+            </div>
+
+            <div class="bed"></div>
+            <div class="pillow"></div>
+            <div class="body"></div>
+            <div class="head"></div>
+            <div class="arm"></div>
+
+            <div class="floor"></div>
+
+            <div class="scene-tag">
+                23:58 · 침실 내부 · 외부 침입 흔적 없음
             </div>
 
         </div>
 
-        <div class="case-story">
+        <div class="case-text">
 
-            <div class="case-tag">CASE BRIEFING</div>
-
-            <div class="case-story-title">
+            <div class="case-title">
                 한 남자가 자신의 방 안에서 쓰러진 채 발견됐다.
             </div>
 
-            <div class="case-story-text">
-                현관은 잠겨 있었고 창문에는 침입 흔적이 없었다.
-                그런데 사건 당일 밤, 건물 CCTV에는
-                <b style="color:#66d3ff;">18분의 공백</b>이 존재한다.
-                <br>
-                현장에 있었던 사람들은 서로 다른 이야기를 하고 있다.
-                당신은 질문 하나씩으로 거짓말을 찾아야 한다.
+            <div class="case-desc">
+                현관문은 잠겨 있었고 창문도 안쪽에서 잠겨 있었다.
+                그런데 사건 당일 밤, 누군가 피해자의 집 주변을 오갔다는 기록이 남아 있다.
+                피해자의 휴대폰에서는 마지막 통화 기록 하나가 삭제되어 있다.
+            </div>
+
+            <div style="margin-top:8px;">
+                <span class="keyword">CCTV</span>
+                <span class="keyword">잠긴 현관</span>
+                <span class="keyword">삭제된 통화</span>
+                <span class="keyword">마지막 목격자</span>
             </div>
 
         </div>
-
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-
-    # 사건 핵심 단서
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-        st.markdown("""
-        <div class="clue">
-            <div class="clue-title">EVIDENCE 01</div>
-            <div class="clue-text">
-                현관 강제침입 흔적 없음
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with c2:
-        st.markdown("""
-        <div class="clue">
-            <div class="clue-title">EVIDENCE 02</div>
-            <div class="clue-text">
-                CCTV 18분 기록 공백
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with c3:
-        st.markdown("""
-        <div class="clue">
-            <div class="clue-title">EVIDENCE 03</div>
-            <div class="clue-text">
-                마지막 통화 기록 존재
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # 확보 단서
-    if st.session_state.clues:
-
-        st.markdown("""
-        <div style="
-            margin-top:8px;
-            color:#5bcaff;
-            font-size:10px;
-            letter-spacing:2px;
-            font-weight:800;
-        ">
-        RECOVERED CLUES
-        </div>
-        """, unsafe_allow_html=True)
-
-        recent = st.session_state.clues[-3:]
-
-        for clue in recent:
-            st.markdown(
-                f"""
-                <div class="clue">
-                    <div class="clue-title">+ 단서 확보</div>
-                    <div class="clue-text">{clue}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
 
 # =========================================================
-# RIGHT — INTERROGATION
+# RIGHT - INTERROGATION
 # =========================================================
 
 with right:
 
     st.markdown("""
-    <div class="panel">
-        <div class="panel-header">
-            <div class="panel-title">INTERROGATION // 심문</div>
-            <div class="panel-code">YES / NO ONLY</div>
+    <div class="panel interrogation">
+        <div class="panel-head">
+            INTERROGATION <span>//</span> 심문
+            <span style="float:right;">YES / NO ONLY</span>
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("""
-    <div class="interrogation">
-    """, unsafe_allow_html=True)
-
-    # 진행률
-    progress = min(100, int(st.session_state.questions / 15 * 100))
-
-    st.markdown(f"""
-    <div style="display:flex;justify-content:space-between;">
-        <div class="question-count">
-            현재 질문 {st.session_state.questions} / 15
+    st.markdown(
+        f"""
+        <div style="padding:10px 13px 0 13px;">
+            <div style="display:flex; justify-content:space-between;">
+                <span style="color:#47caff; font-size:10px; font-weight:800;">
+                    현재 질문 {st.session_state.questions}/15
+                </span>
+                <span style="color:#667d88; font-size:9px;">
+                    INVESTIGATION
+                </span>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill"
+                     style="width:{min(100, st.session_state.questions / 15 * 100)}%;">
+                </div>
+            </div>
         </div>
-        <div style="color:#667984;font-size:10px;">
-            YES / NO
-        </div>
-    </div>
-
-    <div class="progress-track">
-        <div class="progress-fill" style="width:{progress}%"></div>
-    </div>
-    """, unsafe_allow_html=True)
-
+        """,
+        unsafe_allow_html=True
+    )
 
     # 용의자 선택
-    st.markdown("""
-    <div style="
-        color:#8195a0;
-        font-size:10px;
-        letter-spacing:1px;
-        margin-bottom:5px;
-    ">
-    심문 대상
-    </div>
-    """, unsafe_allow_html=True)
 
-    suspect_names = list(SUSPECTS.keys())
+    st.markdown(
+        '<div style="padding:4px 13px 0 13px; color:#8197a3; font-size:10px;">심문 대상</div>',
+        unsafe_allow_html=True
+    )
 
-    selected = st.selectbox(
-        "심문 대상",
-        suspect_names,
-        index=suspect_names.index(st.session_state.current_suspect),
+    suspect = st.selectbox(
+        "용의자",
+        list(SUSPECTS.keys()),
         label_visibility="collapsed"
     )
 
-    st.session_state.current_suspect = selected
-
-    suspect = SUSPECTS[selected]
+    data = SUSPECTS[suspect]
 
     st.markdown(f"""
-    <div class="suspect active">
+    <div class="suspect-box">
 
         <div class="suspect-name">
-            {selected}
+            {suspect}
         </div>
 
         <div class="suspect-role">
-            {suspect["role"]}
+            {data["role"]}
         </div>
 
         <div class="suspect-line">
-            {suspect["description"]}
+            {data["line"]}
         </div>
 
-        <div style="
-            margin-top:7px;
-            color:#8ea4ae;
-            font-size:9px;
-        ">
-            의심점: {suspect["secret"]}
+        <div class="suspicion">
+            의심점 · {data["suspicion"]}
         </div>
 
     </div>
     """, unsafe_allow_html=True)
 
+    # 질문
 
-    # 질문 입력
+    st.markdown("""
+    <div class="question-box">
+        <div class="question-label">
+            QUESTION // 예 또는 아니오로 답할 수 있게 물어보세요
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     question = st.text_input(
         "질문",
-        placeholder="예: CCTV를 본 적이 있습니까?",
-        label_visibility="collapsed"
+        placeholder="예: 사건 당일 피해자의 집에 들어갔습니까?",
+        label_visibility="collapsed",
+        key="question_input"
     )
 
+    q1, q2 = st.columns([1, 1])
 
-    # 질문 처리
-    ask = st.button(
-        "🔎  질문하기",
-        type="primary",
-        use_container_width=True
+    with q1:
+        ask = st.button("🔎 질문하기", use_container_width=True)
+
+    with q2:
+        clear = st.button("↻ 질문 초기화", use_container_width=True)
+
+    if clear:
+        st.session_state.question_input = ""
+        st.rerun()
+
+    # 빠른 질문
+
+    st.markdown(
+        '<div style="color:#687f8b; font-size:9px; margin-top:5px;">추천 질문</div>',
+        unsafe_allow_html=True
     )
 
+    r1, r2, r3, r4 = st.columns(4)
 
-    if ask:
+    quick_questions = [
+        "CCTV에 찍혔습니까?",
+        "피해자에게 전화했습니까?",
+        "현관으로 들어갔습니까?",
+        "알리바이가 있습니까?"
+    ]
 
-        if not question.strip():
+    for col, q in zip([r1, r2, r3, r4], quick_questions):
+        with col:
+            if st.button(q, key="quick_" + q, use_container_width=True):
+                result = ask_question(suspect, q)
 
-            st.warning("질문을 입력해주세요.")
+                if st.session_state.questions < 15:
+                    st.session_state.questions += 1
 
-        elif st.session_state.questions >= 15:
+                ans, txt, valid, key = result
 
-            st.error("질문 횟수를 모두 사용했습니다.")
+                st.session_state.last_answer = {
+                    "suspect": suspect,
+                    "answer": ans,
+                    "text": txt,
+                    "key": key
+                }
 
+                st.session_state.history.append(
+                    (suspect, q, ans)
+                )
+
+                if valid:
+                    st.session_state.score += 5
+
+                st.rerun()
+
+    # 실제 질문 처리
+
+    if ask and question.strip():
+
+        if st.session_state.questions >= 15:
+            st.session_state.trust = max(
+                0,
+                st.session_state.trust - 5
+            )
         else:
 
-            q = question.lower().strip()
-
-            found_key = None
-
-            for key in QUESTIONS.keys():
-                if key in q:
-                    found_key = key
-                    break
-
-            if found_key is None:
-
-                # 모르는 질문도 게임처럼 처리
-                generic = [
-                    (
-                        "아니오",
-                        "현재 확보된 증거로는 그 사실을 확인할 수 없습니다.",
-                        "이 질문만으로는 새로운 단서를 얻지 못했습니다.",
-                        1
-                    ),
-                    (
-                        "예",
-                        "그럴 가능성은 있습니다. 하지만 결정적인 증거는 아닙니다.",
-                        "다른 증거와 비교해볼 필요가 있습니다.",
-                        2
-                    ),
-                    (
-                        "아니오",
-                        "그 부분은 현재 사건 기록과 일치하지 않습니다.",
-                        "다른 시간대의 진술을 확인해보십시오.",
-                        2
-                    ),
-                ]
-
-                answer, text, clue, points = random.choice(generic)
-
-            else:
-
-                answer, text, clue, points = QUESTIONS[found_key]
-
-                # 특정 용의자에 대한 답변이 존재하면 적용
-                if (
-                    selected in SUSPECT_ANSWERS
-                    and found_key in SUSPECT_ANSWERS[selected]
-                ):
-                    answer, text = SUSPECT_ANSWERS[selected][found_key]
+            ans, txt, valid, key = ask_question(
+                suspect,
+                question
+            )
 
             st.session_state.questions += 1
-            st.session_state.score += points
 
-            st.session_state.last_answer = answer
-            st.session_state.last_question = question
+            st.session_state.last_answer = {
+                "suspect": suspect,
+                "answer": ans,
+                "text": txt,
+                "key": key
+            }
 
-            if clue not in st.session_state.clues:
-                st.session_state.clues.append(clue)
+            st.session_state.history.append(
+                (suspect, question, ans)
+            )
 
-            st.session_state.history.append({
-                "suspect": selected,
-                "question": question,
-                "answer": answer,
-                "clue": clue,
-            })
+            if valid:
+
+                st.session_state.score += 5
+
+                # 중요한 단서
+
+                important = {
+                    ("최도현", "cctv"),
+                    ("최도현", "열쇠"),
+                    ("최도현", "문"),
+                    ("박서연", "열쇠"),
+                    ("박서연", "집"),
+                    ("김민재", "마지막"),
+                    ("김민재", "전화")
+                }
+
+                if (suspect, key) in important:
+
+                    clue = f"{suspect}의 진술에서 이상한 점을 발견했다."
+
+                    if clue not in st.session_state.clues:
+                        st.session_state.clues.append(clue)
+                        st.session_state.score += 10
+
+            else:
+                st.session_state.trust = max(
+                    0,
+                    st.session_state.trust - 2
+                )
 
             st.rerun()
 
-
     # 답변
+
     if st.session_state.last_answer:
+
+        la = st.session_state.last_answer
 
         st.markdown(f"""
         <div class="answer">
 
-            <div class="answer-label">
-                {st.session_state.current_suspect}의 답변
+            <div style="font-size:9px; color:#6d8490; letter-spacing:2px;">
+                {la["suspect"]}의 답변
+            </div>
+
+            <div class="answer-big">
+                {la["answer"]}
             </div>
 
             <div class="answer-text">
-                <b style="color:#58ccff;">
-                    {st.session_state.last_answer}
-                </b>
-                · {text if 'text' in locals() else ''}
+                {la["text"]}
             </div>
 
         </div>
         """, unsafe_allow_html=True)
 
+    else:
 
-    st.markdown("</div></div>", unsafe_allow_html=True)
+        st.markdown("""
+        <div class="notice">
+            아직 질문한 내용이 없습니다.<br>
+            용의자에게 질문해서 서로 다른 진술을 찾아내세요.
+        </div>
+        """, unsafe_allow_html=True)
+
+    # 단서
+
+    if st.session_state.clues:
+
+        st.markdown(
+            '<div style="margin-top:8px; color:#56ccf2; font-size:9px; letter-spacing:2px;">EVIDENCE FOUND</div>',
+            unsafe_allow_html=True
+        )
+
+        for clue in st.session_state.clues[-3:]:
+            st.markdown(
+                f'<div class="clue">◆ {clue}</div>',
+                unsafe_allow_html=True
+            )
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # =========================================================
-# BOTTOM AREA
+# BOTTOM INVESTIGATION
 # =========================================================
 
-st.markdown("<div style='height:7px'></div>", unsafe_allow_html=True)
+st.write("")
 
-b1, b2, b3 = st.columns([1, 1, 1])
+b1, b2, b3 = st.columns([1.1, 1.1, 1.8])
 
 with b1:
 
     if st.button(
-        "📋 수사 기록 보기",
+        "📁 확보한 단서 보기",
         use_container_width=True
     ):
 
-        if not st.session_state.history:
-            st.info("아직 질문한 기록이 없습니다.")
+        if not st.session_state.clues:
+            st.info("아직 확보한 단서가 없습니다.")
         else:
-            for h in st.session_state.history[-5:]:
-                st.markdown(
-                    f"""
-                    <div class="clue">
-                        <div class="clue-title">
-                            {h["suspect"]} · {h["answer"]}
-                        </div>
-                        <div class="clue-text">
-                            Q. {h["question"]}
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+            for i, clue in enumerate(st.session_state.clues, 1):
+                st.write(f"**단서 {i}** — {clue}")
 
 
 with b2:
 
     if st.button(
-        "🧠 최종 추리하기",
-        use_container_width=True
-    ):
-
-        if len(st.session_state.clues) < 3:
-
-            st.warning(
-                "아직 단서가 부족합니다. 최소 3개의 단서를 확보하세요."
-            )
-
-        else:
-
-            st.session_state.game_finished = True
-
-
-with b3:
-
-    if st.button(
-        "↻ 사건 초기화",
+        "🧹 수사 기록 초기화",
         use_container_width=True
     ):
 
         st.session_state.questions = 0
         st.session_state.score = 0
+        st.session_state.trust = 100
         st.session_state.clues = []
         st.session_state.history = []
         st.session_state.last_answer = None
-        st.session_state.last_question = ""
-        st.session_state.current_suspect = "김민재"
-        st.session_state.game_finished = False
-
         st.rerun()
 
 
-# =========================================================
-# FINAL DEDUCTION
-# =========================================================
-
-if st.session_state.game_finished:
-
-    st.markdown("""
-    <div class="panel" style="margin-top:8px;">
-
-        <div class="panel-header">
-            <div class="panel-title">
-                FINAL DEDUCTION // 최종 추리
-            </div>
-        </div>
-
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown(
-        "### 🔎 범인은 누구라고 생각합니까?"
-    )
-
-    final_suspect = st.radio(
-        "범인",
-        list(SUSPECTS.keys()),
-        horizontal=True,
-        label_visibility="collapsed"
-    )
-
-    st.markdown(
-        "### 당신의 최종 판단"
-    )
-
-    final_reason = st.text_input(
-        "최종 판단",
-        placeholder="범인과 그렇게 판단한 이유를 적어주세요.",
-        label_visibility="collapsed"
-    )
+with b3:
 
     if st.button(
-        "🚨 최종 판결",
-        type="primary",
+        "🧠 최종 추리 제출",
         use_container_width=True
     ):
 
-        # 정답을 하나로 고정하지 않고
-        # 여러 단서 조합을 기반으로 판단
+        if st.session_state.questions < 5:
 
-        score = st.session_state.score
-        clue_count = len(st.session_state.clues)
-
-        # 기본 정답
-        correct = "최도윤"
-
-        if final_suspect == correct:
-
-            st.success("TRUE ENDING")
-
-            st.markdown(f"""
-            <div class="panel" style="
-                padding:30px;
-                margin-top:15px;
-                text-align:center;
-                border-color:#2f9fc8;
-            ">
-
-                <div style="
-                    color:#5ed0ff;
-                    font-size:11px;
-                    letter-spacing:4px;
-                ">
-                    CASE CLOSED
-                </div>
-
-                <div style="
-                    font-size:36px;
-                    font-weight:900;
-                    margin-top:10px;
-                    color:white;
-                ">
-                    당신이 사건을 해결했다.
-                </div>
-
-                <div style="
-                    color:#aabcc5;
-                    margin-top:10px;
-                    line-height:1.8;
-                ">
-                    CCTV의 공백과 출입 기록,
-                    그리고 서로 맞지 않는 진술을 조합한 결과
-                    최도윤의 진술이 사건 기록과 충돌한다.
-                </div>
-
-                <div style="
-                    margin-top:20px;
-                    color:#60cdfc;
-                    font-size:13px;
-                ">
-                    수사 점수 {score} · 확보 단서 {clue_count}
-                </div>
-
-            </div>
-            """, unsafe_allow_html=True)
-
-        elif final_suspect == "김민재":
-
-            st.warning("PARTIAL ENDING")
-
-            st.markdown("""
-            <div class="answer">
-                <div class="answer-label">부분적으로 맞았다.</div>
-                <div class="answer-text">
-                    김민재는 중요한 거짓말을 하고 있었지만
-                    사건의 핵심은 CCTV 기록에 있었다.
-                    한 사람만 의심해서는 진실에 도달할 수 없다.
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.warning(
+                "단서가 너무 부족합니다. 최소 5번 이상 질문해보세요."
+            )
 
         else:
 
-            st.error("BAD ENDING")
+            st.session_state.game_over = True
 
             st.markdown("""
-            <div class="answer">
-                <div class="answer-label">수사 실패</div>
-                <div class="answer-text">
-                    당신은 가장 눈에 띄는 사람을 범인으로 지목했다.
-                    하지만 탐정에게 필요한 것은 의심이 아니라
-                    서로 맞지 않는 사실을 찾아내는 것이다.
-                </div>
+            <div class="notice success">
+
+            <b>FINAL INVESTIGATION</b><br><br>
+
+            수사가 종료되었습니다.<br>
+            확보한 단서와 용의자들의 진술을 비교하세요.
+
+            <br><br>
+
+            가장 중요한 것은 단순히 거짓말을 찾는 것이 아닙니다.<br>
+            <b>서로 다른 진술이 어디에서 충돌하는지</b> 확인해야 합니다.
+
             </div>
             """, unsafe_allow_html=True)
+
+
+# =========================================================
+# HISTORY
+# =========================================================
+
+if st.session_state.history:
+
+    st.markdown("""
+    <div style="
+        margin-top:8px;
+        padding:9px 12px;
+        border:1px solid #1c303b;
+        background:#081017;
+        border-radius:8px;
+        color:#728995;
+        font-size:9px;
+    ">
+    <b style="color:#9cb0ba;">최근 수사 기록</b>
+    """, unsafe_allow_html=True)
+
+    recent = st.session_state.history[-3:]
+
+    for suspect_name, q, answer in recent:
+
+        safe_q = q[:70]
+
+        st.markdown(
+            f"""
+            <div style="margin-top:5px;">
+            <span style="color:#42caff;">{suspect_name}</span>
+            · {safe_q}
+            · <b style="color:#fff;">{answer}</b>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # =========================================================
@@ -1284,7 +1241,13 @@ if st.session_state.game_finished:
 # =========================================================
 
 st.markdown("""
-<div class="bottom-note">
-    YES / NO DETECTIVE · CASE 001 · 질문은 단서가 되고 단서는 진실이 된다.
+<div style="
+    text-align:center;
+    color:#334954;
+    font-size:8px;
+    letter-spacing:3px;
+    margin-top:8px;
+">
+YES NO DETECTIVE · CASE SYSTEM v1.0 · CONFIDENTIAL
 </div>
 """, unsafe_allow_html=True)
